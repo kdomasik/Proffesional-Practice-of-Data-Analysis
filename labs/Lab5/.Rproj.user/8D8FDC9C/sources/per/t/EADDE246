@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1573129276842.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "954887154",
+    "id" : "EADDE246",
+    "lastKnownWriteTime" : 1572868310,
+    "last_content_update" : 1572868310,
+    "path" : "~/GitHub/ST344/EDA/tidydata.r",
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "33,37",
+        "scrollLine" : "3"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

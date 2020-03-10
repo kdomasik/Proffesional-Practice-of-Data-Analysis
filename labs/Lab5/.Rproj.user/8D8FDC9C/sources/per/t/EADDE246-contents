@@ -1,0 +1,21 @@
+library(timevis)
+library(rio)
+library(data.table)
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+
+
+length(unique(myData$AlbumName))
+
+
+myData$Year <- substr(myData$AlbumReleaseDate, 1, 4)
+myData$month <- substr(myData$AlbumReleaseDate, 6,7)
+
+myData$Year <- as.numeric(myData$Year)
+myData$month <- as.numeric(myData$month)
+
+if (myData$month == 12 || myData$month == 1 ||myData$month == 2)
+
+atts = sapply(myData, function(x) sum(x == "" | is.na(x)))
+

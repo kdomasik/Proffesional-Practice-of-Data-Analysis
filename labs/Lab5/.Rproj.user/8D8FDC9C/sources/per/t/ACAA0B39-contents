@@ -1,0 +1,34 @@
+library(timevis)
+library(rio)
+library(data.table)
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+
+myData <- import("edited_spotify.xlsx", setclass = "tibble")
+myData <- mutate(myData, ArtistGenres = strsplit(ArtistGenres, ","))
+
+Genres <- myData$ArtistGenres
+Genre <- vector(mode = "list", length = 1)
+count = 1
+for(each in Genres)
+{
+  for(i in each)
+  {
+    Genre[count] = i
+    count = count + 1
+  }
+}
+addCol <- function(myData, name, Genre)
+{
+  isGenre <- as.list(grep('name', Genre, value=TRUE))
+  isGenre <- unique(isGenre)
+  numberCol <- ncol(myData) + 1
+  for(each in 1:length(myData$Artist))
+  {
+    myData[each, numberCol] =  length(intersect(as.list(myData[each, 3][[1,1]]), isGenre)) > 0
+  }
+  colnames(myData)[numberCol] <- paste ("is", name, sep = "_", collapse = NULL)
+  return(myData)
+}
+myData <- addCol(myData, "pop",Genre)

@@ -1,0 +1,27 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1573129509532.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2258329891",
+    "id" : "89FE39BC",
+    "lastKnownWriteTime" : 1573123061,
+    "last_content_update" : 1573123061,
+    "path" : "~/GitHub/ST344---private/labs/Lab5/lab5.Rmd",
+    "project_path" : "lab5.Rmd",
+    "properties" : {
+        "cursorPosition" : "15,16",
+        "last_setup_crc32" : "",
+        "scrollLine" : "0",
+        "tempName" : "Untitled1"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

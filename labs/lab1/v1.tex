@@ -1,0 +1,282 @@
+\documentclass[]{article}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\usepackage{fixltx2e} % provides \textsubscript
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\else % if luatex or xelatex
+  \ifxetex
+    \usepackage{mathspec}
+  \else
+    \usepackage{fontspec}
+  \fi
+  \defaultfontfeatures{Ligatures=TeX,Scale=MatchLowercase}
+\fi
+% use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+% use microtype if available
+\IfFileExists{microtype.sty}{%
+\usepackage{microtype}
+\UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\PassOptionsToPackage{usenames,dvipsnames}{color} % color is loaded by hyperref
+\hypersetup{unicode=true,
+            pdftitle={Lab Report no 1 for ST344},
+            pdfauthor={1632905},
+            colorlinks=true,
+            linkcolor=Maroon,
+            citecolor=Blue,
+            urlcolor=blue,
+            breaklinks=true}
+\urlstyle{same}  % don't use monospace font for urls
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx,grffile}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+\IfFileExists{parskip.sty}{%
+\usepackage{parskip}
+}{% else
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+}
+\setlength{\emergencystretch}{3em}  % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{0}
+% Redefines (sub)paragraphs to behave more like sections
+\ifx\paragraph\undefined\else
+\let\oldparagraph\paragraph
+\renewcommand{\paragraph}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+\let\oldsubparagraph\subparagraph
+\renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+
+%%% Use protect on footnotes to avoid problems with footnotes in titles
+\let\rmarkdownfootnote\footnote%
+\def\footnote{\protect\rmarkdownfootnote}
+
+%%% Change title format to be more compact
+\usepackage{titling}
+
+% Create subtitle command for use in maketitle
+\providecommand{\subtitle}[1]{
+  \posttitle{
+    \begin{center}\large#1\end{center}
+    }
+}
+
+\setlength{\droptitle}{-2em}
+
+  \title{Lab Report no 1 for ST344}
+    \pretitle{\vspace{\droptitle}\centering\huge}
+  \posttitle{\par}
+    \author{1632905}
+    \preauthor{\centering\large\emph}
+  \postauthor{\par}
+    \date{}
+    \predate{}\postdate{}
+  
+
+\begin{document}
+\maketitle
+
+\hypertarget{background}{%
+\section{1. Background}\label{background}}
+
+The task we were given is to examine the relationship between
+self-perceived attractiveness and the the variablewhich measureshow much
+one person believesthat their data wants to meet with them again, to
+which we will refer as \emph{date likelihood}.
+
+My research will be based on the results of the experiment which was
+conducted by researchers for Columbia, Harvard and Stanford
+Universities. The raw data can be found on
+\href{http://www.stat.columbia.edu/~gelman/arm/examples/speed.dating/}{this
+website}.
+
+The researchers Fisman, Iyengar, Kamenica and Simonson aimed to find how
+people choose their dating and/or marriage partners. Afterthoroough
+consideration, they decided to pursue speed dating experiment to gather
+necessary data for their research. Before the events, the potential
+participants were asked to fill out a online survey which asked them to
+rate themselves on the following attributes: : attractiveness,
+sincerity, intelligence, fun and ambition. They also provided various
+demographical information, such as their ethnicity, their field of
+study, the name of the university at which they studied or had been
+undergraduates, and their home location (ZIP code). As the sutdy focused
+only on heterosexual couples, during each event the female participant
+had a 4-minute conversation with a maleparticipant, after which they
+filled out a post-meeting score sheet and proceeded to their next
+partners. Therefore, during on event, each participant took part in more
+than one date.
+
+\hypertarget{introduction}{%
+\section{2. Introduction}\label{introduction}}
+
+We stard our work with uploading the necessary data.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{SpeedRawData <-}\StringTok{ }\KeywordTok{read.csv}\NormalTok{(}\StringTok{"SpeedDatingRawData.csv"}\NormalTok{)}
+\NormalTok{SpeedData <-}\StringTok{ }\KeywordTok{read.csv}\NormalTok{(}\StringTok{"SpeedData.csv"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+One of our main variables will be self-perceived attractiveness as
+mentioned above. It will be represented by variable \emph{attr3\_1}
+which has a following description in the survey:\\
+\emph{``Please rate your opinion of your own attributes, on a scale of
+1-10 (be honest!): Attractive''}\\
+We purposefully chose not to take into account variables attr3\_2,
+atter3\_3 and attr3\_4. Although they also measured self-attractiveness,
+they were colleted some time after the specific event and may be biased
+because of later dates or other events which can perturb our
+measurements.
+
+As the variable which measures \emph{date likelihood} we will use
+\emph{prob} which is the anser to the question: \emph{How probable do
+you think it is that this person will say `yes' for you? (1=not
+probable, 10=extremely probable)}
+
+\hypertarget{data-preparation}{%
+\section{3. Data preparation}\label{data-preparation}}
+
+We must point that we will use onle each participant's first speed data,
+as the next ones occur in very short periods of time and could be not
+mutually independent. As part of data cleaning, we want also to erase
+rows without values in them. In order to perform those tasks, we
+prepared a function:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{DataCleaning<-}\ControlFlowTok{function}\NormalTok{(RawData, }\DataTypeTok{waves=}\KeywordTok{c}\NormalTok{(}\DecValTok{1}\OperatorTok{:}\DecValTok{21}\NormalTok{), }\DataTypeTok{attribute1=}\StringTok{"prob"}\NormalTok{, }\DataTypeTok{attribute2=}\StringTok{"attr3_1"}\NormalTok{)}
+\NormalTok{\{}
+\NormalTok{part <-}\StringTok{ }\NormalTok{(SpeedRawData}\OperatorTok{$}\NormalTok{partner }\OperatorTok{==}\StringTok{ }\DecValTok{1}\NormalTok{)}
+\NormalTok{SpeedData <-}\StringTok{ }\NormalTok{RawData[part, }\KeywordTok{c}\NormalTok{(}\StringTok{"iid"}\NormalTok{, }\StringTok{"gender"}\NormalTok{, }\StringTok{"prob"}\NormalTok{, }\StringTok{"attr3_1"}\NormalTok{)]}
+\NormalTok{SpeedData<-SpeedData[}\KeywordTok{complete.cases}\NormalTok{(SpeedData),]}
+\KeywordTok{return}\NormalTok{(SpeedData)}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{analysis}{%
+\section{4. Analysis}\label{analysis}}
+
+For the purpose of this analysis, we will construct function which will
+create boxplots for our data.\\
+We will plot data for males and females separately to examine if there
+are differences between them. In our dataset males are denoted as
+\emph{1} and females as \emph{0}.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{PlotData <-}\StringTok{ }\ControlFlowTok{function}\NormalTok{(inputfile, }\DataTypeTok{waves =} \KeywordTok{c}\NormalTok{(}\DecValTok{1}\OperatorTok{:}\DecValTok{21}\NormalTok{),}
+                     \DataTypeTok{attribute1 =} \StringTok{"prob"}\NormalTok{, }\DataTypeTok{attribute2 =} \StringTok{"attr3_1"}\NormalTok{)}
+\NormalTok{\{}
+\NormalTok{  Data <-}\StringTok{ }\KeywordTok{DataCleaning}\NormalTok{(inputfile)}
+  \KeywordTok{par}\NormalTok{(}\DataTypeTok{mfrow=}\KeywordTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{2}\NormalTok{))}
+  \KeywordTok{boxplot}\NormalTok{(Data[,}\DecValTok{3}\NormalTok{] }\OperatorTok{~}\StringTok{ }\NormalTok{Data[,}\DecValTok{4}\NormalTok{], }\DataTypeTok{data =}\NormalTok{ Data, }\DataTypeTok{subset =}\NormalTok{ (gender}\OperatorTok{==}\DecValTok{1}\NormalTok{),}
+          \DataTypeTok{main =} \StringTok{"Relationship for males"}\NormalTok{, }\DataTypeTok{col =}\NormalTok{ (}\KeywordTok{c}\NormalTok{(}\StringTok{"lightblue"}\NormalTok{, }\StringTok{"darkblue"}\NormalTok{)),}
+          \DataTypeTok{xlab =} \StringTok{"Self-perceived attractiveness"}\NormalTok{, }\DataTypeTok{ylab =} \StringTok{"Date Likelihood"}\NormalTok{)}
+  \KeywordTok{boxplot}\NormalTok{(Data[,}\DecValTok{3}\NormalTok{] }\OperatorTok{~}\StringTok{ }\NormalTok{Data[,}\DecValTok{4}\NormalTok{], }\DataTypeTok{data =}\NormalTok{ Data, }\DataTypeTok{subset =}\NormalTok{ (gender}\OperatorTok{==}\DecValTok{0}\NormalTok{),}
+          \DataTypeTok{main =} \StringTok{"Relationship for females"}\NormalTok{, }\DataTypeTok{col =}\NormalTok{ (}\KeywordTok{c}\NormalTok{(}\StringTok{"lightblue"}\NormalTok{, }\StringTok{"darkblue"}\NormalTok{)),}
+          \DataTypeTok{xlab =} \StringTok{"Self-perceived attractiveness"}\NormalTok{, }\DataTypeTok{ylab =} \StringTok{"Date Likelihood"}\NormalTok{)}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+We use this function to create box plots for our data.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{PlotData}\NormalTok{(SpeedRawData)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{v1_files/figure-latex/chunk4-1.pdf}
+
+From the first boxplot, we see that there is the strong positive
+correlation between self-perceived attractiveness and data likelihood
+for males. The mean of data likelihood is higher for males with higher
+self-perceived attractiveness.\\
+However, this relationsship is not that clear for females. The trend is
+mostly positive but the relationship is much less linear in this case.
+
+Furthermore, we see from the plots that some people with very high
+self-perceived attractiveness rate their dating chances very low as the
+plot shows that there are people who rated their attractiveness on 8-10
+and still thinks that their Date Likelihood is in the range 0-2. Also,
+we can find out that the median of Date Likelihood for very attractive
+females with self-perceived attractiveness of 8 or 9, is only 6.
+
+\hypertarget{conclusions}{%
+\section{6. Conclusions}\label{conclusions}}
+
+We found out that typically people with hiigher self-perceived
+attractiveness have stronger beliefs that the other person will date
+them again. Thir correlation is stronger among males than females. In
+the second case, the relationsheep is more flat, as even females with
+very high self-perceived attractiveness are not sure if other person is
+interested in them.
+
+\hypertarget{references}{%
+\section{7. References}\label{references}}
+
+Fisman, R., S. S. Iyengar, E. Kamenica, and I. Simonson. 2006. ``Gender
+Differences in Mate Selection: Evidence from a Speed Dating
+Experiment.'' The Quarterly Journal of Economics 121 (2). MIT Press:
+673--97.
+
+
+\end{document}

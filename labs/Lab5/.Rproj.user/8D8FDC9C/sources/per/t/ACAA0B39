@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1573129292350.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2365897985",
+    "id" : "ACAA0B39",
+    "lastKnownWriteTime" : 1572868375,
+    "last_content_update" : 1572868375,
+    "path" : "~/GitHub/ST344/EDA/MattEDA.R",
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "33,37",
+        "scrollLine" : "0"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

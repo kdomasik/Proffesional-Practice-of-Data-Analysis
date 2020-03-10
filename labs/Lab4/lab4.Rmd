@@ -1,0 +1,108 @@
+---
+title: "Lab 4"
+author: "Jakub Domasik"
+date: "29/10/2019"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1. Download and import data from Gapminder
+
+ [The Gapminder](hhttps://www.gapminder.org/data/) website has a list of 519 social indicators collected. In this task, I will investigate the __Child mortality__( _0-5 years-olds dying per 1000 born_ ) Libraries rio, dplyr and knitr will be required.
+
+``` {r chunk1, message = FALSE, warning = FALSE}
+library(rio)
+library(dplyr)
+library(knitr)
+library(ggplot2)
+Child_Data <- import("child_mortality.xlsx", setclass = "tibble")
+```
+
+I want to focus only on data from the last 100 years, so I will subset my dataset to include data from the year 1920 onwards. 
+
+``` {r chunk2}
+MyData <- Child_Data[,c(1,120:220)]
+dim(MyData)
+sum(is.na(MyData))
+```
+Our dataset contains data from  193 countries across 102 years(from 1920 till 2010).
+
+There are 546 missing values in our table. 
+
+We'd like to look at our data to examine a couple of first rows. 
+``` {r chunk3}
+head(MyData)
+```
+# 2. Tidying the data
+
+In this step, we need _tidyr_ library. Firstly, we want to sort the data chronologically. Variable mortality will be introduced as the percent of 0-5 years-olds dying per 1000 born.  
+Then, I change the type of variable _year_ to numeric and _country_ to factor. Next, we do not want to have any missing values in the dataset so I delete it. 
+
+Then, I add the column which specifies which continent the country is part of, using the file _Countries.xlsx_. Now, as I do not want to have any missing values in the dataset, I delete it.   
+In the end, I will check how many countries from each continent are in the current dataset and how many of them are in total.
+
+``` {r chunk4, message = FALSE, warning =FALSE}
+library(tidyr)
+
+MyData <- gather(MyData, key = 'year', value = 'mortality', -country)
+
+MyData <- MyData %>% 
+  mutate(country = factor(country), year = as.numeric(year)) %>%
+  arrange(country)
+Countries <- import("Countries.xlsx", setclass = "tibble")
+Countries <- filter(Countries, country %in% MyData$country)
+
+MyData <- left_join(MyData, Countries, by = "country")
+MyData <- mutate(MyData, country = factor(country), continent = factor(continent))
+MyData <- MyData[complete.cases(MyData),]
+length(unique(MyData$country))
+kable(t(as.matrix(summary(filter(MyData, year == 2005)$continent))), 
+      align = c('r', 'r', 'r', 'r', 'r'))
+```
+
+After deleting issing values, we see that _Child Mortality_ was measured each year the during last 100 years in 175 countries around the world. 
+In the dataset, there is a fair representation of countries from every 6 inhabited continents. 
+
+# 3. Data  exploration
+
+I want to compare changes in child mortality in Europe and Asia across the last 100 years. Asia was a much less developed region 100 years ago and made enormous progress especially in the last 40 years. Child  Mortality is closely related to the wealth of the country because the hygiene and quality of healthcare play a very important role here. 
+
+``` {r chunk5, warning = FALSE}
+SubData <- filter(MyData, year %in% c(1920 ,1950, 1980, 2010) & continent %in%  c("Europe", "Asia"))
+
+ggplot(SubData, aes(x = factor(year), y = mortality, fill = factor(continent))) + 
+ geom_violin(scale = "width", draw_quantiles = c(0.25, 0.5, 0.75)) +
+  labs( x = "Year", y = "Child Mortality", title = "Child mortality in Europe and Asia across last 100 years", subtitle = "Child  moratlity in Asia dropped drastically and almost reached its level in Europe",
+        caption = "Data source: www.gapminder.org") +
+  scale_fill_brewer(palette="Dark2")
+```
+
+The graph shows that Child Mortality was very high in 1920 on both continents. However, in Asia more than 400 out of 1000 children had been dying before $5^{th}$ birthday on average, while in Europe this number was almost two times smaller. Despite the constant decrease in Asia, it was only during the period 1980 - 2010  when Asia caught up to Europe. We may conclude that this is the case because of rapid economic growth in so-called "Asian tigers", China and India. Our graph does not account for the population of each country so the impact of China and India on this decrease is the same as every other Asian country. 
+
+It is also worth noting how the shape of Asian violins changed. In 1920, it had long lower and upper tails with the majority of countries in the middle with mortality around 400. In 1950, the violin was much more homogenous, while in 1980 Child Mortality in the most of Asian countries was below 100. 
+
+Concluding, I may say that Asia has been very successfully fighting Child Mortality in the last 100 years and is finally reaching its level in Europe. However, there is still a gap between them. The Asian violin from 2010 is very similar to the European one from 1980. It has only the slightly thicker upper tail. This means that Asia while making huge progress, is still around 30 years behind Europe in terms of Child Mortality.
+
+
+To further examine the relationship between wealth and child mortality, I will present the second graph. 
+
+``` {r chunk6, warning = FALSE, message = FALSE}
+MyData1 <- filter(MyData, (continent == "Europe" | continent == "Asia" |
+                                  continent == "Africa" | continent == "South America" |
+                                  continent == "North America") & (year %in% c(1991:2011)))
+ggplot(MyData1, aes(x = year, y = mortality, color=continent))+
+  geom_smooth()+labs(x = "Year", y = "Child Mortality",
+                     title = "Child mortality across continents in last 20 years",
+                     caption = "Data source: www.gapminder.org", subtitle = "Africa remains the only continent where more than 50 out of 1000 children die before age of 5")
+
+```
+
+
+The plot shows that while Asia, Europe, North America and South America have been still making progress in decreasing Child Mortality, the largest change happened in Africa where it dropped from 150 in 1990 to almost  100 in 2010. The graph confirms that Child Mortality is tightly connected with the wealth of the country. However, in Africa we also observed hundreds of programs conducted by international foundations and organisations( _e.g. United Nations, Bill and Melinda Gates  Foundation_ ), which focus on reducing the problem of water poisoning and eliminating fatal but curable diseases. Those programs are also accountable for this huge decrease in number of deaths among young children as one-third of them is linked to malnutrition. Even more of them can be avoided with a basic set of vaccines for every child. 
+
+Concluding, while in most of the world Child Mortality is not a problem anymore,  Africa is still fighting with it and many children are dying because of the lack of hygiene, noutritious food and basic medicine. Africa made huge progress in the last 20 years reducing the percent of children dying before the age of 5 by almost 50% which is still couple of times more than in Asia, America or Europe.

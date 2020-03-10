@@ -1,0 +1,98 @@
+---
+title: "Lab 2"
+author: "Jakub Domasik"
+date: "15 10 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1.
+
+Our research is based on the data collected by the group of scientists from Harvard, Columbia and Stanford Universities. The raw dataset can be found on [this website](http://www.stat.columbia.edu/~gelman/arm/examples/speed.dating/).
+
+
+# 2. 
+
+Firstly, we set the file with data as our working directory. The next step is to load the library _rio_. Then we use it to import our data with the function __import()__.
+
+``` {r chunk1, include = FALSE} 
+library(rio)
+SpeedDatingRawData <- import("SpeedDatingRawData.csv", setclass = "tibble")
+```
+# 3.
+We were asked  to subset columns from 41 to 60 and save it as variable _Subselect_. To check our result, we print the first three rows of it.
+
+``` {r chunk 2} 
+Subselect <- SpeedDatingRawData[, 41:60]
+print(Subselect, n=3)
+```
+
+
+# 4.
+In order to perform this task, we need to load _dplyr_ library. 
+Next, we use function _select_ to choose  variables _iid_, _partner_, _attr3_1_, _intel3_1_, _sinc3_1_, _fun3_1_ and _amb3_1_. We store  them as _SpeedData_. TO check the names of columns we use function __colnames()__.
+
+``` {r chunk3, message = FALSE} 
+library(dplyr)
+SpeedData <- dplyr::select(SpeedDatingRawData, "iid", "partner", "attr3_1", "intel3_1", "sinc3_1", "fun3_1", "amb3_1")
+colnames(SpeedData)
+```
+# 5. 
+At this step, we need to use function __filter()__, which is included in _dplyr_ library. With this function, we can select only rows with the first date of each participant and store it as _SpeedData_.
+In the end, we check the dimensions of the updated variable with function __dim()__.
+
+``` {r chunk 4}
+SpeedData <- dplyr::filter(SpeedData, (partner == 1))
+dim(SpeedData)
+```
+# 6. 
+In order to keep our dataset clean and tidy, we exclude the column _Partner_ because each row has the same value of "1"  in it. 
+``` {r  chunk5}
+SpeedData$partner <- NULL
+```
+# 7.
+We use function __summary()__ on our cleaned data set to view the summary of each variable in it. 
+``` {r chunk 6}
+summary(SpeedData)
+```
+The first thing to check in the summary is if the data is correct. We see that the _min_ value for each variable is positive between 1 and 3 and _max_ values are 10. Therefore, we can conclude that the values in our data are correct. There are also 9 blank rows with no values(NA) out of total 552  rows. 
+
+# 8. 
+We ahve found that there are 9 missing values in each variable so we apply function __!complete.cases()__ to identify those rows with missing values. 
+``` {r chunk 7}
+SpeedData[!complete.cases(SpeedData),]
+```
+Fortunately, all missing values in each variable occur in the same rows. Therefore, we can simply exclude those rows with the function __na.omit()__.
+``` {r chunk 8 }
+SpeedData <- na.omit(SpeedData)
+```
+
+# 9. 
+At this point, we  would  like to create a column which will store the sum of ratings for  each  participant. We will perform it by applying function __mutate()__ to _SpeedData_ and calling __rowSums__ function to add up values from the right columns.
+``` {r chunk 9}
+SpeedData <- mutate(SpeedData, AttributeSums = rowSums(select(SpeedData, "attr3_1", "sinc3_1", "intel3_1", "fun3_1", "amb3_1")))
+AttributeSums <- pull(SpeedData, "AttributeSums")
+summary(AttributeSums)
+```
+
+The summary shows us that the sum of ratings is between 18 and 50, which is correct. The median is around 40 which indicates that the average rating was around 8. We can also conclude that there were people who gave themselves 10 in each category but no one gave himself/herself 1in every category. 
+
+# 10. 
+Our task is to normalize the ratings of attributes by making them add up to a total of 100 points for each partcipant. We will perform it by applying function __mutate_at__.
+```{r  chunk 10}
+library(dplyr)
+SpeedData <- mutate_at(SpeedData, .vars = vars(2:7), .funs = (~.*(1/AttributeSums)*100))
+head(SpeedData)
+```
+# 11. 
+The tibble _SpeedData_  is exported to _csv_ file by using __export()__ function from _rio_ library.
+```{r  chunk 11}
+rio::export(SpeedData, "Lab2Data.csv")
+```
+
+# References
+
+Fisman, R., S. S. Iyengar, E. Kamenica, and I. Simonson. 2006. “Gender Differences in Mate Selection: Evidence from a Speed Dating Experiment.” The Quarterly Journal of Economics 121 (2). MIT Press: 673–97.

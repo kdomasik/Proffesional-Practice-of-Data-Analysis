@@ -1,0 +1,78 @@
+---
+title: "Practical 5 Report"
+author: "Jakub Domasik, 1632905"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Introduction
+In this report, we will examine how relationships between valence and danceability differ for songs containing speech. We will distinguish two  groups of  songs: speechy(rap) and non-speechy(non-rap). In my work, libraries _splines_ and _ggplot2_, _readxl_ and _gridExtra_ are required. We will investigate this relationship on the _edited_spotify.xlsx_ dataset for variables: _TrackValence_, _TrackDanceability_ and _TrackSpeechiness_.
+``` {r chunk1, warming = FALSE, message = FALSE, echo = FALSE}
+library(ggplot2)
+library(splines)
+library(gridExtra)
+library(readxl)
+Spotify <- read_excel("edited_spotify.xlsx")
+```
+## Analysis
+The intuition suggests that there is a positive relationship between valence and danceability as more valent tracks tend to be  easier to dance to.  
+To further investigate this difference, three models will be constructed. The first one is a simple linear model of the dependance between _TrackDanceability_ and _TrackValence_. The second one allows the intercept to be different for speechy and non-speechy tracks. In the last model, all parameters may be different for rap and non-rap songs.  
+
+``` {r chunk3, message = FALSE, fig.align='center', warning = FALSE,echo = FALSE}
+model1 <- glm(TrackDanceability ~ TrackValence, data = Spotify, family = quasi(link = "log",
+                                                                               variance = "mu^2"))
+model2 <- glm(TrackDanceability ~ TrackValence + as.numeric(TrackSpeechiness>0.33),
+              data = Spotify, family = quasi(link = "log", variance = "mu^2"))
+model3 <- glm(TrackDanceability  ~ -1 + TrackValence + factor(TrackSpeechiness > 0.33)
+              + factor(TrackSpeechiness>0.33):TrackValence, data = Spotify,
+              family = quasi(link = "log", variance = "mu^2"))
+```
+``` {r chunk4, fig.height = 2.7, message = FALSE, warning = FALSE, echo = FALSE}
+plot1 <- ggplot(Spotify, aes(x = TrackValence, y  = TrackDanceability)) + theme(legend.position = "top", plot.title = element_text(size=8)) +
+  geom_smooth(method = 'glm', formula = y ~ x, method.args = list(family = quasi(link = "log", variance = "mu^2"))) +
+  ylab("TrackDanceability") + xlab("TrackValence") +  labs(title = "GLM fit with log link, multiplicative error, and B−spline")
+
+Speechiness <- Spotify$TrackSpeechiness
+plot2 <- ggplot(Spotify) + geom_smooth(data=(model2), aes(x = Spotify$TrackValence, y = model2$fitted.values, color=Speechiness>0.33))+ 
+  ylab("TrackDanceability") + theme(legend.position = "bottom", plot.title = element_text(size=8)) + xlab("TrackValence") + scale_fill_discrete(name = "TrackSpeechiness") + labs(title = "GLM fit with log link, multiplicative error, and B−spline")
+plot3 <- ggplot(Spotify) +
+  geom_smooth(data=(model3), aes(x = Spotify$TrackValence, y = model3$fitted.values, color=Speechiness>0.33)) +
+  ylab("TrackDanceability")  +  theme(legend.position = "right", plot.title = element_text(size=16)) + xlab("TrackValence") + scale_fill_discrete(name = "TrackSpeechiness > 0.33") + labs(title = "GLM fit with log link, multiplicative error, and B−spline", fill = "High Speechiness")
+grid.arrange(plot1, plot2, ncol =2)
+plot3
+```
+
+In the first graph, we see a very high correlation between valance of the track and its danceability. The fit looks  more or less as a straight line with a slight bend in the middle  facing downwards.  
+From the second model, we learn that rap albums have a larger intercept which means that on average they have larger danceability score by around 0.08.  
+Last plot shows us that the line representing non-rap songs have much smaller intercept(by around 0.15), however it has a much steeper slope so non-rap songs which are very valent have similar danceability as rap songs with high valence. We may say that the difference in danceability between rap and non-rap songs is diminishing as the valence of the tracks is growing.
+```{r chunk 4a, echo= FALSE}
+library(pander)
+pander(anova(model1, model2, model3, test = 'F'), style = 'rmarkdown')
+```
+
+Using ANOVA table on our 3 models, we get P value very close to 0 for the second model and 0.06 for the third model. We claim that all of the models significantly improve our knowledge about the relationship between valence and danceability in two groups: speechy and non-speechy songs. Therefore, we may use the third model as it is the most complex and explains the reality in the most detailed way.  
+Next, I will try to cluster the albums based on three variables: _TrackValence_, _AlbumSpeechiness_ and _AlbumDanceability_.  We have 211 rows and it is reasonable to define  8 clusters, because people usually define 8 main genres of music. Then I will create a dendrogram of those clusters using the function _fviz_dend_ from the library _factoextra_.
+
+``` {r chunk5,fig.width = 10, echo = FALSE, message = FALSE, warning = FALSE}
+library(dplyr)
+MyData = {Spotify %>% 
+    group_by(Artist,AlbumName,AlbumReleaseDate) %>% 
+    summarize(AlbumValence = mean(TrackValence),
+              AlbumDanceability = mean(TrackDanceability),
+              AlbumSpeechiness = mean(TrackSpeechiness) )}
+        
+              
+MyDFData = as.data.frame(MyData)
+MyDFData[,4:6] <- scale(MyDFData[,4:6])
+row.names(MyDFData) = paste(MyDFData$Artist,MyDFData$AlbumName)
+
+res.hc <- hclust(dist(MyDFData[,4:6]),  method = "ward.D2")
+library(factoextra)
+fviz_dend(res.hc,k = 8, palette = "uchicago", labels_track_height = 10, show_labels = TRUE, cex = 0.15) + labs(title = "Dendrogram of clusters based on average valence, speechiness and danceability of albums", xlab = "Albums")
+```
+We see that the first, highest division of our dendrogram creates two, very unequal groups. The first one(on the left) consists only of less than 10% and only one cluster, while the other group contains all 7 other clusters. We may conclude that this small group of songs is very different than others in terms of the chosen variables. 
+Furthermore, we see that the clusters are roughly similar in the size and that around 50% of the data is contained in half of the clusters(4).

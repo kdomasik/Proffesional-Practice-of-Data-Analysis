@@ -1,0 +1,85 @@
+---
+title: "Lab3"
+author: "Jakub Domasik"
+date: "22 10 2019"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+#  1. Get the Data
+``` {r chunk1, message=FALSE}
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+require(dplyr)
+require(ggplot2)
+library(readxl)
+library(tidyverse)
+library(rio)
+Spotify <- import("edited_spotify.xlsx")
+MyData = {Spotify %>% 
+    group_by(Artist,AlbumName,AlbumReleaseDate) %>% 
+    summarize(AlbumValence = mean(TrackValence),
+              AlbumSpeechiness = mean(TrackSpeechiness),
+              AlbumLiveness = mean(TrackLiveness) )}
+MyData$AlbumReleaseDate = parse_date_time(MyData$AlbumReleaseDate,orders=c("y","ym","ymd"))
+```
+
+
+# Graph no 1
+
+
+``` {r chunk2}
+MyData$Genre <- "Other"
+MyData$Genre[MyData$AlbumSpeechiness>0.2] <- "Rap"
+myplot1 <- { MyData %>% ggplot(aes(x = AlbumReleaseDate,  y = AlbumValence, fill = Genre, color = Genre))} + geom_point(aes(size=AlbumSpeechiness)) +
+geom_smooth(method = loess, se=FALSE) + xlab( "Album Release Year") + ylab ( "Average Valence of  the Album") + theme(legend.position= "top", legend.background = element_rect(fill="white", size=0.5, linetype = "solid", colour="black"))  +
+  labs(title = "Average valence of the non-rap album is decreasing over the years", subtitle = "Rap Albums tend to have higher valence than non-rap ones.")
+myplot1
+svg(file = "Kuba-plot.svg", width = 8, height = 5)
+print(myplot1)
+dev.off()
+
+```
+
+
+
+Spotify's database describes _Valance_ as a measure from 0.0 to 1.0 describing the musical positiveness conveyed by a track. Tracks with high _valence_ sound more positive (e.g. happy, cheerful, euphoric), while tracks with low _Valence_ sound more negative (e.g. sad, depressed, angry). 
+This graph plots average _Valence_  of each album in a dataset, against the release date of the album.
+The variable _Genre_ was created to indicate which album contains most likely rap music and which do not. 
+From the scatterplot, we indicate that generally, the _Valance_ of an album tends to be negatively correlated with the release date of the album. This means, that newer albums are typically sadder than older ones. 
+The graph also shows a difference in valance between rap and non-rap albums. Rap albums are generally more valent than non-rap ones. There are only two albums classified as "rap" which were released before 1980 and the majority of"rap" albums in our dataset was published from 1990 to 2005. These albums are relatively high _Valence_ which is usually higher than 0.5.
+
+We conclude that generally newer albums are more pessimistic than older ones and that _rap_ albums tend to be more positive on average.
+It is hard to find any other sensible patterns in this graph as our dataset is rather small and _rap_ albums are hugely underrepresented in the dataset. 
+
+
+# Grapgh no  2
+
+
+``` {r chunk3, warning = FALSE}
+MyData$AlbumSpeechiness[MyData$AlbumSpeechiness>0.21] <- "High"
+MyData$AlbumSpeechiness[MyData$AlbumSpeechiness<=0.1] <- "Low"
+MyData$AlbumSpeechiness[MyData$AlbumSpeechiness>0.1 & MyData$AlbumSpeechiness<=0.2] <- "Medium"
+
+library(ggplot2)
+myplot2 <-ggplot(data=MyData, aes(x = AlbumSpeechiness, y=AlbumValence, fill = AlbumSpeechiness)) + geom_boxplot() +
+  theme(legend.position= "right", legend.background = element_rect(fill="white", size=0.5, linetype = "solid", colour="black")) +
+  scale_x_discrete(limits=c("Low", "Medium", "High")) +
+  stat_summary(fun.y = mean, geom="point", shape=15, size = 3) +
+  ylab("Average Valence of the Album") + xlab("Amount of Speech in the Album") + 
+  labs(title = "Relationship between  the amount of speech and valance of the album", subtitle = "Albums with highest amount of  speech tend to be the most valent ones.")
+myplot2
+```
+
+
+The variable _"AlbumSpeechiness"_ was transformed into a discrete one with one of three values: _Low_, _Medium_ and _High_. Those values indicate how much speech each album contains on average. 
+The boxplot was created to plot _AlbumSpeechiness_ against the _AlbumValence_. 
+The graph indicates that albums with _low_ to _medium_ _Speechiness_ tend to have similar valance although the first box which contains albums with the low amount of speech have much greater variance and range. 
+Furthermore, albums with _high_ spechiness are on average more valent than others with median and mean around 0.63 while others have then below 0.5.
+We can say that albums with _low_ amount of speech are the most versatile in terms of _Valence_. 
+However, out of  10 most valent albums, 9 have _low_ valence and only one has _high_ _Valence_. This may be the result of the distribution of _AlbumSpeechiness_ in the dataset where the majority of the albums have _low_ _speechiness_ while only a few have _high_ _Valance_. 
+
+We conclude that albums with no to little speech are the most versatile in terms of _valence. We also confirm our finding from the previous graph that _rap_ albums are more optimistic on average but the majority of the most positive songs contain no to little speech.  

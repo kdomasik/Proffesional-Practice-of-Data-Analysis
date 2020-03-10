@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1573129283412.000,
+    "dirty" : true,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "4110526417",
+    "id" : "3961C24C",
+    "lastKnownWriteTime" : 1572886752,
+    "last_content_update" : 1573129373836,
+    "path" : "~/GitHub/ST344/EDA/change date.R",
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "13,33",
+        "scrollLine" : "0"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
