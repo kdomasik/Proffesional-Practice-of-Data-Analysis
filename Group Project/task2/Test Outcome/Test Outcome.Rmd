@@ -1,0 +1,83 @@
+---
+title: "Test Outcome"
+author: u1724656 Ziru Zhou
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Set up
+
+```{r}
+library(dplyr)
+library(readxl)
+library(robustHD)
+data <- read.csv("cleanedData.csv")
+mydata <- dplyr::select(data, ArtistID, AlbumID, TrackID, AlbumPopularity, TrackDanceability, TrackEnergy, TrackLoudness, TrackSpeechiness, TrackAcousticness, TrackInstrumentalness, TrackLiveness, TrackValence, TrackTempo)
+source("ST344-Recommendation-System.R")
+```
+
+
+```{r eval = TRUE}
+v1 <- data$TrackID[data$Artist == "Shirley Bassey" & data$AlbumName == "Shirley Bassey"]
+main(as.character(sample(v1,1)))
+```
+
+```{r eval = TRUE}
+v2 <- data$TrackID[data$Artist == "Roy Orbison" & data$AlbumName == "In Dreams"]
+main(as.character(sample(v2,1)))
+```
+
+```{r eval = TRUE}
+v3 <- data$TrackID[data$Artist == "Pink Floyd" & data$AlbumName == "Meddle"]
+main(as.character(sample(v3,1)))
+```
+
+```{r eval = TRUE}
+v4 <- data$TrackID[data$Artist == "The Clash" & data$AlbumName == "London Calling"]
+main(as.character(sample(v4,1)))
+```
+
+```{r eval = TRUE}
+v5 <- data$TrackID[data$Artist == "Public Enemy" & data$AlbumName == "It Takes A Nation Of Millions To Hold Us Back"]
+main(as.character(sample(v5,1)))
+```
+
+```{r eval = TRUE}
+v6 <- data$TrackID[data$Artist == "Madness" & data$AlbumName == "Absolutely"]
+main(as.character(sample(v6,1)))
+```
+
+```{r eval = TRUE}
+v7 <- data$TrackID[data$Artist == "Massive Attack" & data$AlbumName == "Blue Lines"]
+main(as.character(sample(v7,1)))
+```
+
+```{r eval = TRUE}
+v8 <- data$TrackID[data$Artist == "The Chemical Brothers" & data$AlbumName == "Dig Your Own Hole"]
+main(as.character(sample(v8,1)))
+```
+
+```{r eval = TRUE}
+v9 <- data$TrackID[data$Artist == "The Flaming Lips" & data$AlbumName == "Yoshimi Battles The Pink Robots"]
+main(as.character(sample(v9,1)))
+```
+
+```{r eval = TRUE}
+v10 <- data$TrackID[data$Artist == "The Streets" & data$AlbumName == "Original Pirate Material"]
+main(as.character(sample(v10,1)))
+```
+
+```{r eval = TRUE}
+v11 <- data$TrackID[data$Artist == "Tinie Tempah" & data$AlbumName == "Disc-Overy"]
+main(as.character(sample(v11,1)))
+```
+
+```{r eval = TRUE}
+v12 <- data$TrackID[data$Artist == "Foals" & data$AlbumName == "What Went Down"]
+main(as.character(sample(v12,1)))
+```
+
+**Note that the five recommended tracks are sampled based on the distribution from the selected data subset**

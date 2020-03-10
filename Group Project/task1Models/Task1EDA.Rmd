@@ -1,0 +1,229 @@
+---
+title: "Model Tests and EDA"
+author: '1716655'
+date: "12/11/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("~/GitHub/ST344/task1Models")
+library(rio)
+library(data.table)
+library(ggplot2)
+library(dplyr)
+library(xlsx)
+library(robustHD)
+myData <- import("cleanedData.csv", setclass= "tibble")
+```
+
+
+The below code groups all data as the mean across an album. Use of mean provisional, may make sense to use sum for things like duration, or mins and maxes to see hits. It also removes uninteresting columns, like strings and ids
+
+```{r albumAggregate}
+
+myData <- {myData %>% 
+    group_by(ArtistPopularity, ArtistNumFollowers, 
+             AlbumBestChartPosition, AlbumWeeksOnChart, AlbumWeeksNumberOne,
+             AlbumPopularity, Release_year, Release_month, Season, isPop, isFolk, 
+             isRock, isIndie, isTechno, isRap, isJazz, isMetal, isBlues, isPunk) %>% 
+    summarize(AlbumLoudness = mean(TrackLoudness),		
+              AlbumTempo = mean(TrackTempo),
+              AlbumAvgDuration = mean(TrackDuration),		
+              AlbumDanceability = mean(TrackDanceability),
+              AlbumEnergy = mean(TrackEnergy),
+              AlbumKey = mean(TrackKey),		
+              AlbumSpeechiness = mean(TrackSpeechiness),
+              AlbumAcousticness = mean(TrackAcousticness),
+              AlbumInstrumentalness = mean(TrackInstrumentalness),		
+              AlbumLiveness = mean(TrackLiveness),
+              AlbumValence = mean(TrackValence),
+              AlbumTimeSignature = mean(TrackTimeSignature),
+
+              AlbumTempo = mean(TrackTempo)
+    )}
+
+
+```
+
+## On artists and the metrics of popularity
+There is strong correlation between artist popularity and album popularity, and interestingly weeker correlation between album popularity and weeks on chart. We may need to develop more sophisticated measures of popularity. A look at the API gives us that popularity is established based off of the number of plays, with recent plays higher. This will probably bias towards recent tracks, with older songs having to perform more consistently to secure high popularity. This will be explored in the next block. A look at the graph also seems to indicate a bunching effect - it appears that popularity is probably not linear to listens. However, Artist and Album popularity seem to use the same scale. Plotting the log of the number of followers gives a (stochasitc) linear relationship, indicating an exponential scale is used. This is worth bearing in mind - stakeholders may have a linear interest in listens, depending on how profits are made (a price per play obviously favours a linear relationship between popularity and utility.)
+
+```{r ArtistAlbumEDA}
+
+cor(myData$ArtistPopularity, myData$AlbumPopularity)
+plot(myData$ArtistPopularity, myData$AlbumPopularity)
+
+cor(myData$ArtistNumFollowers, myData$AlbumPopularity)
+plot(myData$ArtistNumFollowers, myData$AlbumPopularity)
+plot(log(myData$ArtistNumFollowers), myData$AlbumPopularity)
+cor(log(myData$ArtistNumFollowers), myData$AlbumPopularity)
+
+cor(myData$ArtistPopularity, myData$AlbumWeeksOnChart)
+plot(myData$ArtistPopularity, myData$AlbumWeeksOnChart)
+
+cor(myData$AlbumWeeksNumberOne, myData$AlbumPopularity)
+plot(myData$AlbumWeeksNumberOne, myData$AlbumPopularity)
+
+cor(myData$AlbumPopularity, myData$AlbumWeeksOnChart)
+plot(myData$AlbumPopularity, myData$AlbumWeeksOnChart)
+
+plot(log(myData$ArtistNumFollowers), myData$ArtistPopularity)
+cor(log(myData$ArtistNumFollowers), myData$ArtistPopularity)
+```
+
+## On time
+
+Correlation between release year and popularity exists, however it is low. Perhaps unsurprisingly, recent albums tend to have less weeks on the chart. Controlling for the most recent years eliminates this correlation. This would indicate that whilst old music is listend to less often, it still performed well on release. Whether this shows people moving on from music they have heard before or changing tastes remains to be seen. Further analysis remains to be done on seasonality and months. 
+```{r nonMusicalEDA}
+cor(myData$AlbumPopularity, myData$Release_year)
+plot(myData$AlbumPopularity, myData$Release_year)
+
+NAData <- na.omit(myData)
+cor(NAData$AlbumWeeksOnChart, NAData$Release_year)
+plot(NAData$AlbumWeeksOnChart, NAData$Release_year)
+
+
+NAData <- filter(na.omit(myData), Release_year < 2010)
+cor(NAData$AlbumWeeksOnChart, NAData$Release_year)
+plot(NAData$AlbumWeeksOnChart, NAData$Release_year)
+```
+
+##On music
+
+```{r reductions}
+musicalData <- select(ungroup(myData), -ArtistNumFollowers, -ArtistPopularity, -Release_year, -Release_month, -Season, -isPop, -isRock, -isIndie, -isFolk, -isMetal, -isTechno, -isBlues, -isRap, -isPunk,-isJazz)
+```
+
+There appear to be positive correlations >.1 between popularity and loudness, danceability, energy and speechiness. There also exist negative correlations <-.1 between popularity and accousticness. Interestingly there is far lower correlation between weeks on chart and speechiness/danceability than there is between popularity and those variables. Given that speechiness and danceability correlate (0.4) this could simply indicate that those variables indicate the presence of a recently popular genre or style, like rap. Danceability is a particularly interesting variable, as it correlates well with popularity, but not with time in charts, and negatively with best position in charts (modified to make higher numbers be better.)
+```{r musicEDA}
+library(corrgram)
+library(corrplot)
+correlations <- cor(musicalData)
+musicalData2 <- mutate(na.omit(musicalData), AlbumBestChartPosition = 100 -AlbumBestChartPosition)
+correlations2 <- cor((musicalData2))
+{musicalData %>% ggplot(aes(x = AlbumPopularity, y = AlbumLoudness))} +
+    geom_point()  + geom_smooth()
+{musicalData %>% ggplot(aes(x = AlbumPopularity, y = AlbumDanceability))} +
+    geom_point()  + geom_smooth()
+{musicalData %>% ggplot(aes(x = AlbumPopularity, y = AlbumEnergy))} +
+    geom_point()  + geom_smooth()
+{musicalData %>% ggplot(aes(x = AlbumPopularity, y = AlbumSpeechiness))} +
+    geom_point()  + geom_smooth()
+{musicalData %>% ggplot(aes(x = AlbumPopularity, y = AlbumAcousticness))} +
+    geom_point()  + geom_smooth()
+corrplot(correlations, method = "number")
+
+```
+
+##On genre
+Only 4 metal songs, only 7 jazz songs
+```{r genre}
+
+analysis <- function(myData)
+{
+    print(mean(myData$AlbumPopularity))
+    corData <- select(ungroup(myData), -ArtistNumFollowers, -ArtistPopularity, -Release_year, -Release_month, -Season, -isPop, -isRock, -isIndie, -isFolk, -isMetal, -isTechno, -isBlues, -isRap, -isPunk,-isJazz)
+    correlations <- cor(corData)
+    corrplot(correlations, method = "color")
+}
+
+rap <- filter(myData, isRap == TRUE)
+cor(rap$AlbumPopularity, rap$AlbumAcousticness)
+plot(rap$AlbumPopularity, rap$AlbumAcousticness)
+
+pop <- filter(myData, isPop == TRUE)
+indie <- filter(myData, isIndie == TRUE)
+folk <- filter(myData, isFolk == TRUE)
+metal <- filter(myData, isMetal == TRUE)
+techno <- filter(myData, isTechno == TRUE)
+jazz <- filter(myData, isJazz == TRUE)
+blues <- filter(myData, isBlues == TRUE)
+punk <- filter(myData, isPunk == TRUE)
+rock <- filter(myData, isRock == TRUE)
+
+print("rap")
+analysis(rap)
+print("rock")
+analysis(rock)
+print("Indie")
+analysis(indie)
+print("techno")
+analysis(techno)
+print("pop")
+analysis(pop)
+print("folk")
+analysis(folk)
+print("jazz")
+analysis(jazz)
+print("blues")
+analysis(blues)
+print("punk")
+analysis(punk)
+
+```
+
+
+```{r modeltests}
+#tempo
+model1 <- glm(AlbumPopularity ~ AlbumDanceability + AlbumLoudness + AlbumSpeechiness + AlbumEnergy + AlbumAcousticness,data = myData, family = quasi(link = "log", variance = "mu^2"))
+summary(model1)
+anova(model1, test= "Chi")
+print("GAPHERE")
+model2 <- lm((AlbumPopularity) ~ AlbumDanceability + AlbumAcousticness,data = myData)
+summary(model2)
+anova(model2, test= "Chi")
+```
+
+
+```{r TOMCODE}
+library(leaps)
+musicalData1 <- select(ungroup(myData), -ArtistNumFollowers, -ArtistPopularity, -Release_year, -Release_month, -Season, -isPop, -isRock, -isIndie, -isFolk, -isMetal, -isTechno, -isBlues, -isRap, -isPunk,-isJazz, -AlbumBestChartPosition,  -AlbumWeeksOnChart, -AlbumWeeksNumberOne)
+models<-regsubsets(AlbumPopularity~. ,musicalData, nvmax = 8 )
+summary(models)
+
+
+musicalData2 <- select(ungroup(myData), -ArtistNumFollowers, -ArtistPopularity, -AlbumBestChartPosition,  -AlbumWeeksOnChart, -AlbumWeeksNumberOne)
+models<-regsubsets(AlbumPopularity~. ,musicalData2, nvmax = 8 )
+summary(models)
+
+```
+
+```{r tester}
+myData <- import("cleanedData.csv", setclass= "tibble")
+myData <- {myData %>% 
+    group_by(ArtistPopularity, ArtistNumFollowers, 
+             AlbumBestChartPosition, AlbumWeeksOnChart, AlbumWeeksNumberOne,
+             AlbumPopularity, Release_year, Release_month, Season, isPop, isFolk, 
+             isRock, isIndie, isTechno, isRap, isJazz, isMetal, isBlues, isPunk) %>% 
+    summarize(AlbumLoudness = mean(TrackLoudness),		
+              AlbumTempo = mean(TrackTempo),
+              AlbumAvgDuration = mean(TrackDuration),		
+              AlbumDanceability = mean(TrackDanceability),
+              AlbumEnergy = mean(TrackEnergy),
+              AlbumKey = mean(TrackKey),		
+              AlbumSpeechiness = mean(TrackSpeechiness),
+              AlbumAcousticness = mean(TrackAcousticness),
+              AlbumInstrumentalness = mean(TrackInstrumentalness),		
+              AlbumLiveness = mean(TrackLiveness),
+              AlbumValence = mean(TrackValence),
+              AlbumTimeSignature = mean(TrackTimeSignature),
+
+              AlbumTempo = mean(TrackTempo)
+    )}
+
+musicalData3 <- select(ungroup(myData), -ArtistNumFollowers, -ArtistPopularity, -AlbumBestChartPosition,  -AlbumWeeksOnChart, -AlbumWeeksNumberOne, -Release_month, -Season, -AlbumKey)
+models<-regsubsets(AlbumPopularity~. ,musicalData3, nvmax = 10)
+summary(models)
+musicalData4 <- select(ungroup(myData), -ArtistNumFollowers, -ArtistPopularity, -AlbumBestChartPosition,  -AlbumWeeksOnChart, -AlbumWeeksNumberOne, -Release_month, -Season, -AlbumKey,-isPop, -isRock, -isIndie, -isFolk, -isMetal, -isTechno, -isBlues, -isRap, -isPunk,-isJazz)
+models<-regsubsets(AlbumPopularity~. ,musicalData4, nvmax = 10)
+summary(models)
+```
+
+
+
+```{r model}
+GoodModel  <-  lm((AlbumPopularity) ~ (Release_month == "January") + AlbumAcousticness +AlbumValence + AlbumDanceability + isPunk +isBlues + isJazz+ isRock + isPop,data = myData)
+summary(GoodModel)
+anova(GoodModel)
+```

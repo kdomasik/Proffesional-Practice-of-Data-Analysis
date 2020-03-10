@@ -1,0 +1,1105 @@
+---
+title: "Technical Appendix"
+author: 'Group 6'
+date: "27/11/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Libraries
+ggbiplot does not work with the most recent version of r, so it and code using it has been ommited
+```{r libraries, message = FALSE}
+library(lubridate)
+library(dplyr)
+library(rio)
+library(data.table)
+library(ggplot2)
+library(xlsx)
+library(timevis)
+#library(ggbiplot)
+library(robustHD)
+library(Hmisc)
+library(tidyverse)
+library(GGally)
+library(pander)
+library(gridExtra)
+library(corrgram)
+library(corrplot)
+library(leaps)
+library(pracma)
+library(glmnet)
+library(splus2R)
+library(readxl)
+library(ggpubr)
+```
+## DataCleaning
+
+#Code to reformat dates
+Please note the additional dates were added manually, so the modified dataset already includes them. 
+This code reformats dates. 
+```{r ChangeDate}
+edited_spotify_clean_dates  <- import("edited_spotify.xlsx", setclass= "tibble")
+edited_spotify_clean_dates$AlbumReleaseDate = parse_date_time(edited_spotify_clean_dates$AlbumReleaseDate,orders=c("y","ym","ymd"))
+
+data1 <- edited_spotify_clean_dates %>% dplyr::mutate(Release_year = lubridate::year(edited_spotify_clean_dates$AlbumReleaseDate), 
+                Release_month = lubridate::month(edited_spotify_clean_dates$AlbumReleaseDate), 
+                Release_day = lubridate::day(edited_spotify_clean_dates$AlbumReleaseDate))
+
+data2 <- select (data1,-c(AlbumReleaseDate, Release_day))
+
+Season <- data2$Release_month
+Season[Season %in% 12] <- "winter"
+Season[Season %in% 1] <- "winter"
+Season[Season %in% 2] <- "winter"
+Season[Season %in% 3] <- "spring"
+Season[Season %in% 4] <- "spring"
+Season[Season %in% 5] <- "spring"
+Season[Season %in% 6] <- "summer"
+Season[Season %in% 7] <- "summer"
+Season[Season %in% 8] <- "summer"
+Season[Season %in% 9] <- "autumn"
+Season[Season %in% 10] <- "autumn"
+Season[Season %in% 11] <- "autumn"
+
+data2 <- cbind(data2, Season)
+
+data2$Release_month[data2$Release_month %in% 1] <- "January"
+data2$Release_month[data2$Release_month %in% 2] <- "February"
+data2$Release_month[data2$Release_month %in% 3] <- "March"
+data2$Release_month[data2$Release_month %in% 4] <- "April"
+data2$Release_month[data2$Release_month %in% 5] <- "May"
+data2$Release_month[data2$Release_month %in% 6] <- "June"
+data2$Release_month[data2$Release_month %in% 7] <- "July"
+data2$Release_month[data2$Release_month %in% 8] <- "August"
+data2$Release_month[data2$Release_month %in% 9] <- "September"
+data2$Release_month[data2$Release_month %in% 10] <- "October"
+data2$Release_month[data2$Release_month %in% 11] <- "November"
+data2$Release_month[data2$Release_month %in% 12] <- "December"
+
+```
+
+
+The below code adds genres to the cleaned data, and exports it as a csv. The index column should be manually deleted from the clean data. 
+```{r genres}
+
+myData <- data2
+
+Genres <- myData$ArtistGenres
+Genre <- vector(mode = "list", 1)
+count = 1
+for(each in Genres)
+{
+  for(i in as.list(strsplit(each, ",")[[1]]))
+  {
+    Genre[count] = i
+    count = count + 1
+  }
+}
+Genre <- unique(Genre)
+
+addCol <- function(myData, names, isName, Genre)
+{
+  isGenre <- as.list(grep(paste(names,collapse="|"), Genre, value=TRUE))
+  isGenre <- unique(isGenre)
+  numberCol <- ncol(myData) + 1
+  for(each in 1:length(myData$Artist))
+  {
+    myData[each, numberCol] =  length(intersect(as.list(strsplit(myData[each, 3][[1]], ",")[[1]]), isGenre)) > 0
+  }
+  colnames(myData)[numberCol] <- paste (isName, sep = "_", collapse = NULL)
+  return(myData)
+}
+##Below Code is used to analyse which genres are ignored/not included by the genre aggregation. 
+# reducedGenre <- Genre[! Genre  %in% as.list(grep("pop", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("rock", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("folk", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("country", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("electro", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("techno", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("hip hop", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("grime", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("rap", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("jazz", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("punk", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("soul", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("metal", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("blues", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("indie", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("dance", Genre, value=TRUE))]
+# reducedGenre <- unique(reducedGenre)
+
+myData <- addCol(myData, c("pop"), "isPop",Genre)
+myData <- addCol(myData, c("rock"), "isRock",Genre)
+myData <- addCol(myData, c("folk", "country"), "isFolk",Genre)
+myData <- addCol(myData, c("electro", "techno"), "isTechno",Genre)
+myData <- addCol(myData, c("hip hop","grime", "rap"), "isRap",Genre)
+myData <- addCol(myData, c("jazz"), "isJazz",Genre)
+myData <- addCol(myData, c("indie"), "isIndie",Genre)
+myData <- addCol(myData, c("metal"), "isMetal",Genre)
+myData <- addCol(myData, c("blues", "r&b", "soul"), "isBlues",Genre)
+myData <- addCol(myData, c("punk"), "isPunk",Genre)
+
+write.csv(myData, file = "cleanedData.csv")
+
+```
+
+
+## EDA
+
+```{r PCA}
+
+# 
+# myData <- import("cleanedData.csv", setclass = "tibble")
+# reducedData <- select(myData, -ArtistPopularity, -ArtistNumFollowers, 
+#                       -AlbumWeeksOnChart, -AlbumWeeksNumberOne, -Artist, -ArtistID, 
+#                       -ArtistGenres, -AlbumName, -AlbumID, -TrackInstrumentalness,-TrackAcousticness, 
+#                       -TrackID, -TrackName, -AlbumBestChartPosition, -TrackKey)
+# 
+# reducedData$Season = as.numeric(as.factor(reducedData$Season))
+# reducedData$Release_month = as.numeric(as.factor(reducedData$Release_month))
+# reducedData <- select(reducedData, -isPop, - isRock, -isFolk, -isTechno, -isRap, -isJazz, -isIndie, -isMetal, -isBlues, -isPunk)
+# reducedData <- select(reducedData, -TrackNumber, -TrackMode, -TrackDuration)
+# reducedData <- na.omit(reducedData)
+#reducedData <- standardize(reducedData, centerFun = mean, scaleFun = sd)
+
+myData <- import("cleanedData.csv", setclass= "tibble")
+reducedData <- select(myData, TrackValence, TrackTempo, TrackAcousticness, TrackDanceability, TrackEnergy, 
+                      TrackSpeechiness, TrackLiveness, TrackInstrumentalness)
+reducedData <- standardize(reducedData, centerFun = mean, scaleFun = sd)
+pca <- prcomp(reducedData)
+#ggbiplot(pca, alpha = 0.1)
+cor(myData$TrackAcousticness, myData$TrackEnergy)
+
+
+
+
+
+```
+
+```{r}
+
+data <- import("cleanedData.csv", setclass = "tibble")
+
+corr <- select(data, ArtistPopularity, ArtistNumFollowers, AlbumWeeksOnChart, AlbumWeeksNumberOne, AlbumPopularity, TrackDuration, TrackDanceability, TrackEnergy, TrackKey,TrackMode, TrackSpeechiness, TrackAcousticness, TrackInstrumentalness, TrackLiveness, TrackValence, TrackTempo, TrackTimeSignature)
+head(corr)
+cor(corr)
+```
+
+```{r}
+
+rcorr(as.matrix(corr))
+```
+
+
+```{r KUBAEDA}
+
+
+# Cleaning and grouping data
+
+data <- read.csv("cleanedData.csv")
+data <- select(data, -ArtistID, -ArtistGenres, -AlbumID, -TrackID, -TrackTimeSignature, 
+               -Release_month, -TrackKey, -TrackMode, -TrackNumber)
+
+AlbumData = {data %>% 
+    group_by(Artist,AlbumName, isPop, isRock, isFolk, isTechno, isRap, isJazz, isIndie, isMetal, 
+             isBlues, isPunk, Release_year, Season, AlbumWeeksNumberOne, AlbumWeeksOnChart,AlbumPopularity) %>% 
+     dplyr::summarize(AlbumValance = mean(TrackValence), AlbumSpeechiness = mean(TrackSpeechiness),
+              AlbumLiveness = mean(TrackLiveness), AlbumEnergy = mean(TrackEnergy),
+                                   AlbumDanceability = mean(TrackDanceability), AlbumLoudness = mean(TrackLoudness),
+             AlbumAcousticness = mean(TrackAcousticness), AlbumInstrumentalness = mean(TrackInstrumentalness), 
+             AlbumTempo = mean(TrackTempo)) }
+
+#basic things
+#cor(AlbumData[,15:26])
+#summary(AlbumData)
+#str(AlbumData)
+
+
+#Hit indicator
+AlbumData$Hit <- 0
+AlbumData$Hit[AlbumData$AlbumPopularity > 50] <- 1
+AlbumData$Hit[AlbumData$AlbumPopularity <= 50] <- 0
+AlbumData$Hit <- as.factor(AlbumData$Hit)
+
+
+
+#Basic correlation
+ggplot(AlbumData, aes(x = AlbumPopularity, y = AlbumDanceability, colour = Season)) + 
+  geom_jitter() + geom_smooth(method = loess, se=FALSE)
+
+ggplot(AlbumData, aes(x = AlbumPopularity, y = AlbumAcousticness, colour = Season)) + 
+  geom_jitter() + geom_smooth(method = loess, se=FALSE)
+
+ggplot(AlbumData, aes(x = AlbumWeeksOnChart, y = AlbumDanceability, colour = Season)) + 
+  geom_jitter() + geom_smooth(method = loess, se=FALSE) + xlim(0, 140)
+
+ggplot(AlbumData, aes(x = AlbumWeeksOnChart, y = AlbumAcousticness, colour = Season)) + 
+  geom_jitter() + geom_smooth(method = loess, se=FALSE) + xlim(0, 140)
+
+#distribution of album popularity
+ggplot(AlbumData, aes(x = AlbumPopularity)) + geom_histogram(color="black", fill="white", aes(y=..density..)) + 
+  geom_vline(aes(xintercept=mean(AlbumPopularity)), color="blue", linetype="dashed", size=1) +
+  geom_density(alpha = 0.2, fill = 'red') 
+
+
+#template for hit/not hit graphs
+ggplot(AlbumData, aes(x = AlbumDanceability, y = AlbumAcousticness, colour = Hit)) + 
+  geom_jitter() + geom_smooth(method = loess, se=FALSE)
+
+#somelm models
+model1 <- lm(AlbumPopularity ~ isRap + isTechno + isRap + isFolk + isPop + isMetal + isPunk + isBlues + isJazz, data= AlbumData)
+model2 <- lm(AlbumPopularity ~ AlbumValance, data = AlbumData)
+model3 <- lm(AlbumPopularity ~ AlbumValance + AlbumDanceability, data = AlbumData)
+model4 <- lm(AlbumPopularity ~ AlbumValance + AlbumDanceability + AlbumAcousticness, data = AlbumData)
+model5 <- lm(AlbumPopularity ~ AlbumValance + AlbumDanceability + AlbumAcousticness + AlbumSpeechiness, data = AlbumData)
+model6 <- lm(AlbumPopularity ~ AlbumValance + AlbumDanceability + AlbumAcousticness + AlbumLiveness+isRap+isMetal, data = AlbumData)
+
+#Filtering data
+AlbumDataPop <- filter(AlbumData,Hit == '1')
+AlbumDataNot <- filter(AlbumData,Hit == '0')
+
+#hit vs not-hit plots
+
+#Acousticness
+plot1 <- ggplot(AlbumDataPop, aes(x = AlbumAcousticness)) + geom_histogram() + 
+  geom_vline(aes(xintercept=mean(AlbumAcousticness)), color="blue", linetype="dashed", size=1) +
+  geom_density(alpha = 0.2, fill = 'red') + labs(title = "Popular") 
+plot2 <- ggplot(AlbumDataNot, aes(x = AlbumAcousticness)) + geom_histogram() +  
+  geom_vline(aes(xintercept=mean(AlbumAcousticness)), color="blue", linetype="dashed", size=1) +
+  geom_density(alpha = 0.2, fill = 'red') + labs(title = 'Unpopular')
+grid.arrange(plot1, plot2, ncol =2)
+
+#Tempo
+plot3 <- ggplot(AlbumDataPop, aes(x = AlbumTempo)) + 
+  geom_vline(aes(xintercept=mean(AlbumTempo)), color="blue", linetype="dashed", size=1) +
+  geom_density(alpha = 0.2, fill = 'red') + labs(title = "Popular") 
+plot4 <- ggplot(AlbumDataNot, aes(x = AlbumTempo)) +  
+  geom_vline(aes(xintercept=mean(AlbumTempo)), color="blue", linetype="dashed", size=1) +
+  geom_density(alpha = 0.2, fill = 'red') + labs(title = 'Unpopular')
+grid.arrange(plot3, plot4, ncol =2)
+
+#Danceability
+plot5 <- ggplot(AlbumDataPop, aes(x = AlbumDanceability)) + geom_histogram() + 
+  geom_vline(aes(xintercept=mean(AlbumDanceability)), color="blue", linetype="dashed", size=1) +
+  geom_density(alpha = 0.2, fill = 'red') + labs(title = "Popular") 
+plot6 <- ggplot(AlbumDataNot, aes(x = AlbumDanceability)) + geom_histogram() +  
+  geom_vline(aes(xintercept=mean(AlbumDanceability)), color="blue", linetype="dashed", size=1) +
+  geom_density(alpha = 0.2, fill = 'red') + labs(title = 'Unpopular')
+grid.arrange(plot5, plot6, ncol =2)
+
+#Loudness
+plot7 <- ggplot(AlbumDataPop, aes(x = AlbumLoudness)) + 
+  geom_vline(aes(xintercept=mean(AlbumLoudness)), color="blue", linetype="dashed", size=1) +
+  geom_density(alpha = 0.2, fill = 'red') + labs(title = "Popular") 
+plot8 <- ggplot(AlbumDataNot, aes(x = AlbumLoudness)) +  
+  geom_vline(aes(xintercept=mean(AlbumLoudness)), color="blue", linetype="dashed", size=1) +
+  geom_density(alpha = 0.2, fill = 'red') + labs(title = 'Unpopular')
+grid.arrange(plot7, plot8, ncol =2)
+
+#Significance of danceability over time
+plot9 <- ggplot(AlbumDataPop, aes(x = Release_year, y = AlbumDanceability)) + geom_jitter() +
+  labs(title = "Popular") + geom_smooth() + xlim(1960, 2020)
+plot10 <- ggplot(AlbumDataNot, aes(x = Release_year, y = AlbumDanceability)) + geom_jitter() +
+  labs(title = 'Unpopular')+geom_smooth() + xlim(1960, 2020)
+grid.arrange(plot9, plot10, ncol =2)
+
+#significance ofspeechiness over time
+plot9 <- ggplot(AlbumDataPop, aes(x = Release_year, y = AlbumSpeechiness)) + geom_jitter() +
+  labs(title = "Popular") + geom_smooth() + xlim(1960, 2020)
+plot10 <- ggplot(AlbumDataNot, aes(x = Release_year, y = AlbumSpeechiness)) + geom_jitter() +
+  labs(title = 'Unpopular')+geom_smooth() + xlim(1960, 2020)
+
+grid.arrange(plot9, plot10, ncol =2)
+
+#significance of acousticness over time
+plot11 <- ggplot(AlbumDataPop, aes(x = Release_year, y = AlbumAcousticness)) + geom_jitter() +
+  labs(title = "Popular") + geom_smooth() + xlim(1960, 2020)
+plot12 <- ggplot(AlbumDataNot, aes(x = Release_year, y = AlbumAcousticness)) + geom_jitter() +
+  labs(title = 'Unpopular')+geom_smooth() + xlim(1960, 2020)
+
+grid.arrange(plot11, plot12, ncol =2)
+
+
+grid.arrange(plot9, plot10, ncol =2)
+
+#significance of valence over time
+plot13 <- ggplot(AlbumDataPop, aes(x = Release_year, y = AlbumValance)) + geom_jitter() +
+  labs(title = "Popular") + geom_smooth() + xlim(1960, 2020)
+plot14 <- ggplot(AlbumDataNot, aes(x = Release_year, y = AlbumValance)) + geom_jitter() +
+  labs(title = 'Unpopular')+geom_smooth() + xlim(1960, 2020)
+
+grid.arrange(plot13, plot14, ncol =2)
+
+
+plot15 <- ggplot()
+
+```
+
+
+The below code groups all data as the mean across an album. Use of mean provisional, may make sense to use sum for things like duration, or mins and maxes to see hits. It also removes uninteresting columns, like strings and ids
+
+```{r albumAggregate}
+myData <- import("cleanedData.csv", setclass= "tibble")
+myData <- {myData %>% 
+    group_by(ArtistPopularity, ArtistNumFollowers, 
+             AlbumBestChartPosition, AlbumWeeksOnChart, AlbumWeeksNumberOne,
+             AlbumPopularity, Release_year, Release_month, Season, isPop, isFolk, 
+             isRock, isIndie, isTechno, isRap, isJazz, isMetal, isBlues, isPunk) %>% 
+    dplyr::summarize(AlbumLoudness = mean(TrackLoudness),		
+              AlbumTempo = mean(TrackTempo),
+              AlbumAvgDuration = mean(TrackDuration),		
+              AlbumDanceability = mean(TrackDanceability),
+              AlbumEnergy = mean(TrackEnergy),
+              AlbumKey = mean(TrackKey),		
+              AlbumSpeechiness = mean(TrackSpeechiness),
+              AlbumAcousticness = mean(TrackAcousticness),
+              AlbumInstrumentalness = mean(TrackInstrumentalness),		
+              AlbumLiveness = mean(TrackLiveness),
+              AlbumValence = mean(TrackValence),
+              AlbumTimeSignature = mean(TrackTimeSignature),
+
+              AlbumTempo = mean(TrackTempo)
+    )}
+
+
+```
+
+## On artists and the metrics of popularity
+There is strong correlation between artist popularity and album popularity, and interestingly weeker correlation between album popularity and weeks on chart. We may need to develop more sophisticated measures of popularity. A look at the API gives us that popularity is established based off of the number of plays, with recent plays higher. This will probably bias towards recent tracks, with older songs having to perform more consistently to secure high popularity. This will be explored in the next block. A look at the graph also seems to indicate a bunching effect - it appears that popularity is probably not linear to listens. However, Artist and Album popularity seem to use the same scale. Plotting the log of the number of followers gives a (stochasitc) linear relationship, indicating an exponential scale is used. This is worth bearing in mind - stakeholders may have a linear interest in listens, depending on how profits are made (a price per play obviously favours a linear relationship between popularity and utility.)
+
+```{r ArtistAlbumEDA}
+
+cor(myData$ArtistPopularity, myData$AlbumPopularity)
+plot(myData$ArtistPopularity, myData$AlbumPopularity)
+
+cor(myData$ArtistNumFollowers, myData$AlbumPopularity)
+plot(myData$ArtistNumFollowers, myData$AlbumPopularity)
+plot(log(myData$ArtistNumFollowers), myData$AlbumPopularity, xlab = "Test")
+cor(log(myData$ArtistNumFollowers), myData$AlbumPopularity)
+
+cor(myData$ArtistPopularity, myData$AlbumWeeksOnChart)
+plot(myData$ArtistPopularity, myData$AlbumWeeksOnChart)
+
+cor(myData$AlbumWeeksNumberOne, myData$AlbumPopularity)
+plot(myData$AlbumWeeksNumberOne, myData$AlbumPopularity)
+
+cor(myData$AlbumPopularity, myData$AlbumWeeksOnChart)
+plot(myData$AlbumPopularity, myData$AlbumWeeksOnChart)
+
+plot(log(myData$ArtistNumFollowers), myData$ArtistPopularity, xlab = "Log of the artist's number of followers", ylab = "Artist popularity", main = "The relationship between the variables is clearly exponential")
+cor(log(myData$ArtistNumFollowers), myData$ArtistPopularity)
+```
+
+## On time
+
+Correlation between release year and popularity exists, however it is low. Perhaps unsurprisingly, recent albums tend to have less weeks on the chart. Controlling for the most recent years eliminates this correlation. This would indicate that whilst old music is listend to less often, it still performed well on release. Whether this shows people moving on from music they have heard before or changing tastes remains to be seen. Further analysis remains to be done on seasonality and months. 
+```{r nonMusicalEDA}
+cor(myData$AlbumPopularity, myData$Release_year)
+plot(myData$AlbumPopularity, myData$Release_year)
+
+NAData <- na.omit(myData)
+cor(NAData$AlbumWeeksOnChart, NAData$Release_year)
+plot(NAData$AlbumWeeksOnChart, NAData$Release_year)
+
+
+NAData <- filter(na.omit(myData), Release_year < 2010)
+cor(NAData$AlbumWeeksOnChart, NAData$Release_year)
+plot(NAData$AlbumWeeksOnChart, NAData$Release_year)
+```
+
+##On music
+
+```{r reductions}
+musicalData <- select(ungroup(myData), -ArtistNumFollowers, -ArtistPopularity, -Release_year, -Release_month, -Season, -isPop, -isRock, -isIndie, -isFolk, -isMetal, -isTechno, -isBlues, -isRap, -isPunk,-isJazz)
+```
+
+There appear to be positive correlations >.1 between popularity and loudness, danceability, energy and speechiness. There also exist negative correlations <-.1 between popularity and accousticness. Interestingly there is far lower correlation between weeks on chart and speechiness/danceability than there is between popularity and those variables. Given that speechiness and danceability correlate (0.4) this could simply indicate that those variables indicate the presence of a recently popular genre or style, like rap. Danceability is a particularly interesting variable, as it correlates well with popularity, but not with time in charts, and negatively with best position in charts (modified to make higher numbers be better.)
+```{r musicEDA}
+
+CorData <- select(musicalData, -AlbumBestChartPosition, -AlbumWeeksOnChart, -AlbumWeeksNumberOne)
+colnames(CorData) <- c("Popularity","Loudness","Tempo","AvgDuration", "Danceability","Energy","Key","Speechiness","Acousitcness","Instrumentalness","Liveness", "Valance","TimeSignature")
+correlations <- cor(CorData)
+musicalData2 <- mutate(na.omit(musicalData), AlbumBestChartPosition = 100 -AlbumBestChartPosition)
+correlations2 <- cor((musicalData2))
+{musicalData %>% ggplot(aes(x = AlbumPopularity, y = AlbumLoudness))} +
+    geom_point()  + geom_smooth()
+{musicalData %>% ggplot(aes(x = AlbumPopularity, y = AlbumDanceability))} +
+    geom_point()  + geom_smooth()
+{musicalData %>% ggplot(aes(x = AlbumPopularity, y = AlbumEnergy))} +
+    geom_point()  + geom_smooth()
+{musicalData %>% ggplot(aes(x = AlbumPopularity, y = AlbumSpeechiness))} +
+    geom_point()  + geom_smooth()
+{musicalData %>% ggplot(aes(x = AlbumPopularity, y = AlbumAcousticness))} +
+    geom_point()  + geom_smooth()
+#corrplot.mixed(correlations)
+corrplot(correlations, type = "upper", method = "color")
+
+```
+
+##On genre
+Only 4 metal songs, only 7 jazz songs
+```{r genre}
+
+analysis <- function(myData)
+{
+    print(mean(myData$AlbumPopularity))
+    corData <- select(ungroup(myData), -ArtistNumFollowers, -ArtistPopularity, -Release_year, -Release_month, -Season, -isPop, -isRock, -isIndie, -isFolk, -isMetal, -isTechno, -isBlues, -isRap, -isPunk,-isJazz)
+    correlations <- cor(corData)
+    corrplot(correlations, method = "color")
+}
+
+rap <- filter(myData, isRap == TRUE)
+cor(rap$AlbumPopularity, rap$AlbumAcousticness)
+plot(rap$AlbumPopularity, rap$AlbumAcousticness)
+
+pop <- filter(myData, isPop == TRUE)
+indie <- filter(myData, isIndie == TRUE)
+folk <- filter(myData, isFolk == TRUE)
+metal <- filter(myData, isMetal == TRUE)
+techno <- filter(myData, isTechno == TRUE)
+jazz <- filter(myData, isJazz == TRUE)
+blues <- filter(myData, isBlues == TRUE)
+punk <- filter(myData, isPunk == TRUE)
+rock <- filter(myData, isRock == TRUE)
+
+print("rap")
+analysis(rap)
+print("rock")
+analysis(rock)
+print("Indie")
+analysis(indie)
+print("techno")
+analysis(techno)
+print("pop")
+analysis(pop)
+print("folk")
+analysis(folk)
+print("jazz")
+analysis(jazz)
+print("blues")
+analysis(blues)
+print("punk")
+analysis(punk)
+
+```
+
+
+```{r modeltests}
+#tempo
+model1 <- glm(AlbumPopularity ~ AlbumDanceability + AlbumLoudness + AlbumSpeechiness + AlbumEnergy + AlbumAcousticness,data = myData, family = quasi(link = "log", variance = "mu^2"))
+summary(model1)
+anova(model1, test= "Chi")
+print("GAPHERE")
+model2 <- lm((AlbumPopularity) ~ AlbumDanceability + AlbumAcousticness,data = myData)
+summary(model2)
+anova(model2, test= "Chi")
+```
+
+
+```{r TOMCODE}
+
+musicalData1 <- select(ungroup(myData), -ArtistNumFollowers, -ArtistPopularity, -Release_year, -Release_month, -Season, -isPop, -isRock, -isIndie, -isFolk, -isMetal, -isTechno, -isBlues, -isRap, -isPunk,-isJazz, -AlbumBestChartPosition,  -AlbumWeeksOnChart, -AlbumWeeksNumberOne)
+models<-regsubsets(AlbumPopularity~. ,musicalData, nvmax = 8 )
+summary(models)
+
+
+musicalData2 <- select(ungroup(myData), -ArtistNumFollowers, -ArtistPopularity, -AlbumBestChartPosition,  -AlbumWeeksOnChart, -AlbumWeeksNumberOne)
+models<-regsubsets(AlbumPopularity~. ,musicalData2, nvmax = 8 )
+summary(models)
+
+```
+
+```{r tester}
+myData <- import("cleanedData.csv", setclass= "tibble")
+myData <- {myData %>% 
+    group_by(ArtistPopularity, ArtistNumFollowers, 
+             AlbumBestChartPosition, AlbumWeeksOnChart, AlbumWeeksNumberOne,
+             AlbumPopularity, Release_year, Release_month, Season, isPop, isFolk, 
+             isRock, isIndie, isTechno, isRap, isJazz, isMetal, isBlues, isPunk) %>% 
+    dplyr::summarize(AlbumLoudness = mean(TrackLoudness),		
+              AlbumTempo = mean(TrackTempo),
+              AlbumAvgDuration = mean(TrackDuration),		
+              AlbumDanceability = mean(TrackDanceability),
+              AlbumEnergy = mean(TrackEnergy),
+              AlbumKey = mean(TrackKey),		
+              AlbumSpeechiness = mean(TrackSpeechiness),
+              AlbumAcousticness = mean(TrackAcousticness),
+              AlbumInstrumentalness = mean(TrackInstrumentalness),		
+              AlbumLiveness = mean(TrackLiveness),
+              AlbumValence = mean(TrackValence),
+              AlbumTimeSignature = mean(TrackTimeSignature),
+
+              AlbumTempo = mean(TrackTempo)
+    )}
+
+musicalData3 <- select(ungroup(myData), -ArtistNumFollowers, -ArtistPopularity, -AlbumBestChartPosition,  -AlbumWeeksOnChart, -AlbumWeeksNumberOne, -Release_month, -Season, -AlbumKey)
+models<-regsubsets(AlbumPopularity~. ,musicalData3, nvmax = 10)
+summary(models)
+musicalData4 <- select(ungroup(myData), -ArtistNumFollowers, -ArtistPopularity, -AlbumBestChartPosition,  -AlbumWeeksOnChart, -AlbumWeeksNumberOne, -Release_month, -Season, -AlbumKey,-isPop, -isRock, -isIndie, -isFolk, -isMetal, -isTechno, -isBlues, -isRap, -isPunk,-isJazz)
+models<-regsubsets(AlbumPopularity~. ,musicalData4, nvmax = 10)
+summary(models)
+```
+
+
+
+```{r model}
+GoodModel  <-  lm((AlbumPopularity) ~ (Release_month == "January") + AlbumAcousticness +AlbumValence + AlbumDanceability + isPunk +isBlues + isJazz+ isRock + isPop,data = myData)
+summary(GoodModel)
+anova(GoodModel)
+```
+
+## Task 1
+
+# Models
+
+## Implementation of knn. 
+The implementation was developed by Matthew Persin (Group member) for st340 assignment 2. Distance functions were provided by the lecturer of the same module. The code has been reused here to avoid unecessary repititon
+```{r KNNImplementation}
+distances.l2 <- function(x,y)
+{
+  apply(y,1,function(p) apply(x,1,function(q) nthroot(sum((p-q)^2),2)))
+ }
+
+distances.l1 <- function(x,y) {
+  apply(y,1,function(p) apply(x,1,function(q) sum(abs(p-q))))
+}
+
+
+knn.regression.test <- function(k,train.X,train.Y,test.X,test.Y,distances)
+{
+  estimates <- vector()
+  dist <-  distances(train.X, test.X)
+  #Go through each data point to be tested 
+  #and create a vector holding the responses of the k nearest neighbours
+  for(each in 1:dim(test.X)[1])
+  {
+    adjacency <- data.frame(train.Y, dist[,each])
+    colnames(adjacency) <- c("Train", "Distances")
+    adjacency <- adjacency[order(adjacency$Distances),]
+    
+    #Calculate distance weighted mean
+    
+    dis <- 0
+    weightDis <- 0
+    for(i in 1:k)
+    {
+      dis <- dis + 1/adjacency$Distances[i]
+      weightDis <- weightDis + 1/(adjacency$Distances[i]) * adjacency$Train[i] 
+    }
+    estimates[each] = weightDis/dis
+  }
+  
+  print(sum((test.Y-estimates)^2))
+  return(estimates)
+}
+```
+
+```{r ImportData}
+SourceData <- import("cleanedData.csv", setclass= "tibble")
+
+TestAlbums <- c("Shirley Bassey", "In Dreams","Meddle","London Calling",
+                "It Takes A Nation Of Millions To Hold Us Back",
+                "Absolutely", "Blue Lines","Dig Your Own Hole", "Yoshimi Battles The Pink Robots", 
+                "Original Pirate Material",
+                "Disc-Overy", "What Went Down")
+```
+
+## Runs KNN. 
+```{r knnCleaner, warning= FALSE}
+myData <- {SourceData %>% 
+    group_by(AlbumName,AlbumPopularity ,
+             Release_year, Release_month, Season, isPop, isFolk, 
+             isRock, isIndie, isTechno, isRap, isJazz, isMetal, isBlues, isPunk) %>% 
+    dplyr::summarize(AlbumLoudness = mean(TrackLoudness),		
+              AlbumTempo = mean(TrackTempo),
+              AlbumAvgDuration = mean(TrackDuration),		
+              AlbumDanceability = mean(TrackDanceability),
+              AlbumEnergy = mean(TrackEnergy),
+              AlbumKey = mean(TrackKey),		
+              AlbumSpeechiness = mean(TrackSpeechiness),
+              AlbumAcousticness = mean(TrackAcousticness),
+              AlbumInstrumentalness = mean(TrackInstrumentalness),		
+              AlbumLiveness = mean(TrackLiveness),
+              AlbumValence = mean(TrackValence),
+              AlbumTimeSignature = mean(TrackTimeSignature),
+              AlbumTempo = mean(TrackTempo)
+    )}
+##Commented out code can run the other models. 
+myData <- ungroup(myData)
+#Best Model
+#myData <- select(myData, -AlbumAvgDuration, -AlbumKey, -AlbumSpeechiness,-AlbumTimeSignature)
+#test2 Model
+
+#myData <- select(myData, -AlbumAvgDuration, -AlbumKey, -AlbumSpeechiness,-AlbumTimeSignature, -AlbumDanceability)
+#test2 Model
+
+myData <- select(myData, -AlbumAvgDuration, -AlbumKey,-AlbumTimeSignature, -isPop, -isFolk, 
+                 -isRock, -isIndie, -isTechno, -isRap, -isJazz, -isMetal, -isBlues, -isPunk)
+
+for (each in 3:dim(myData)[2])
+{
+  if (!is.number(myData[1,each]))
+  {
+    myData[,each] <- as.numeric(as.factor(unlist(myData[,each])))
+  }
+  myData[,each] <- standardize(myData[,each])
+  
+}
+
+TestData <- filter(myData, AlbumName %in% TestAlbums)
+TestData <- select(TestData, -AlbumName)
+TrainData <- filter(myData, !AlbumName %in% TestAlbums)
+TrainData <- select(TrainData, -AlbumName)
+train.X <- as.matrix(select(TrainData, -AlbumPopularity))
+train.Y <- as.matrix(select(TrainData, AlbumPopularity))
+test.X <- as.matrix(select(TestData, -AlbumPopularity))
+test.Y <- select(TestData, AlbumPopularity)
+
+goodness <- vector()
+for(k in 1:20)
+{
+  #print(k)
+  goodness[k] <- knn.regression.test(k,train.X,train.Y,test.X,test.Y, distances.l2)
+}
+#print(which.min(goodness))
+
+est <- knn.regression.test(2,train.X,train.Y,test.X,test.Y, distances.l2)
+data.frame(est, test.Y, test.Y - est)
+
+
+```
+
+#Code to test ridge regression.
+Output is very close to the null model
+```{r Ridge}
+lambdas <- 10^seq(2, -2, by = -.2)
+ridge <- glmnet(y = train.Y, x = train.X, lambda = lambdas)
+lambdaFind <- cv.glmnet(y = train.Y, x = train.X, alpha = 0, lambda = lambdas)
+optimalLambda <- lambdaFind$lambda.min
+estimates <- predict(ridge, s = optimalLambda, newx = test.X)
+print("Ridge regression")
+print(sum(((test.Y-estimates)^2)))
+```
+
+#Code to create and test a number of linear models
+```{r LinearModel}
+
+myData <- {SourceData %>% 
+    group_by(AlbumName, ArtistPopularity, ArtistNumFollowers, 
+             AlbumBestChartPosition, AlbumWeeksOnChart, AlbumWeeksNumberOne,
+             AlbumPopularity, Release_year, Release_month, Season, isPop, isFolk, 
+             isRock, isIndie, isTechno, isRap, isJazz, isMetal, isBlues, isPunk) %>% 
+    dplyr::summarize(AlbumLoudness = mean(TrackLoudness),		
+              AlbumTempo = mean(TrackTempo),
+              AlbumAvgDuration = mean(TrackDuration),		
+              AlbumDanceability = mean(TrackDanceability),
+              AlbumEnergy = mean(TrackEnergy),
+              AlbumKey = mean(TrackKey),		
+              AlbumSpeechiness = mean(TrackSpeechiness),
+              AlbumAcousticness = mean(TrackAcousticness),
+              AlbumInstrumentalness = mean(TrackInstrumentalness),		
+              AlbumLiveness = mean(TrackLiveness),
+              AlbumValence = mean(TrackValence),
+              AlbumTimeSignature = mean(TrackTimeSignature),
+              
+              AlbumTempo = mean(TrackTempo)
+    )}
+myData <- ungroup(myData)
+TestData <- filter(myData, AlbumName %in% TestAlbums)
+TestData <- select(TestData, -AlbumName)
+TrainData <- filter(myData, !AlbumName %in% TestAlbums)
+TrainData <- select(TrainData, -AlbumName)
+
+train.X <- as.matrix(select(TrainData, -AlbumPopularity))
+train.Y <- as.matrix(select(TrainData, AlbumPopularity))
+test.X <- as.matrix(select(TestData, -AlbumPopularity))
+test.Y <- select(TestData, AlbumPopularity)
+#
+Model1  <-  lm((AlbumPopularity) ~ AlbumAcousticness +AlbumValence  + AlbumDanceability + isPunk +isBlues + isJazz+ isRock + isPop,data = TrainData)
+print(sum((predict(Model1, TestData) - test.Y)^2))
+data.frame(test.Y, predict(Model1, TestData), (predict(Model1, TestData) - test.Y))
+
+Model2  <-  lm((AlbumPopularity) ~ ArtistPopularity+AlbumAcousticness +AlbumValence + AlbumDanceability + isPunk +isBlues + isJazz+ isRock + isPop + isFolk +isRap,data = TrainData)
+print(sum((predict(Model2, TestData) - test.Y)^2))
+data.frame(test.Y, predict(Model2, TestData), (predict(Model2, TestData) - test.Y))
+
+Model3  <-  lm((AlbumPopularity) ~ ArtistPopularity+ArtistNumFollowers,data = TrainData)
+print(sum((predict(Model3, TestData) - test.Y)^2))
+data.frame(test.Y, predict(Model3, TestData), (predict(Model3, TestData) - test.Y))
+
+Model4  <-  lm((AlbumPopularity) ~ AlbumLoudness+	AlbumTempo + AlbumAvgDuration +		
+                   AlbumDanceability+ AlbumEnergy +AlbumSpeechiness +
+                   AlbumAcousticness + AlbumInstrumentalness+	AlbumLiveness+
+                   AlbumValence + AlbumTempo, data = TrainData)
+print(sum((predict(Model4, TestData) - test.Y)^2))
+data.frame(test.Y, predict(Model4, TestData), (predict(Model4, TestData) - test.Y))
+
+
+Model5  <-  lm((AlbumPopularity) ~ AlbumAcousticness +AlbumValence + AlbumDanceability + Release_year+
+                     AlbumTempo+AlbumLoudness+AlbumAvgDuration+AlbumLiveness+AlbumTimeSignature+
+                     AlbumKey, data = TrainData)
+print(sum((predict(Model5, TestData) - test.Y)^2))
+data.frame(test.Y, predict(Model5, TestData), (predict(Model5, TestData) - test.Y))
+
+AllModel <- lm(AlbumPopularity ~. ,data = TrainData)
+print(sum((predict(AllModel, TestData) - test.Y)^2))
+data.frame(test.Y, predict(AllModel, TestData), (predict(AllModel, TestData) - test.Y))
+
+
+```
+
+## Task 2
+
+```{r task2}
+
+#read the data
+data <- read.csv("cleanedData.csv")
+mydata <- dplyr::select(data, ArtistID, AlbumID, TrackID, AlbumPopularity, TrackDanceability, TrackEnergy, TrackLoudness, TrackSpeechiness, TrackAcousticness, TrackInstrumentalness, TrackLiveness, TrackValence, TrackTempo)
+
+
+#Remove the songs from the same album
+#This part of code delete the songs from the same album.
+delete_same_album <- function(trackid, data1){
+  albumid <- data1$AlbumID[mydata$TrackID == trackid]
+  n <- which(grepl(albumid, data1$AlbumID))
+  index <- 1:dim(data1)[1]
+  newindex <- index[!index %in% n]
+  return(newindex) # this part return the index for chosen tracks with respect to the original data set
+}
+
+
+#Eulidean Distance
+#this part will be used as the metric for k-n-n algorithm.
+distances.l2 <- function(x,y){
+    n <- length(x)
+    distance <- 0
+    for (i in 1:n) {
+      distance <- distance + ((x[i] - y[i])^2)
+    }
+    return(sqrt(distance))
+}
+
+
+# Extract
+#This function extract the standardize ocontinuous variable.
+extract <- function(trackid){
+  n <- which(grepl(trackid, mydata$TrackID))
+  newdata <- standardize(mydata[,5:13])
+  return(as.matrix(newdata[n,]))
+}
+test <- extract("4q3z6aThomt6qSdVhjW8R8")
+
+
+#Subset data by release year
+#this part of code returns the data of tracks that released in the recent decade of a particular song:
+decade_data <- function(trackid,data1){
+  release_year <- data$Release_year[data$TrackID == trackid]
+  decade <- (release_year - 5):(release_year + 5)
+  decades <- which(as.vector(data1$Release_year) %in% decade)
+  return(decades)
+}
+
+
+#Genre
+genresubset <- function(trackid, dataset){
+  row1 <- data[data$TrackID==trackid, ]
+  index <- c()
+  for (i in 31:40) {
+    if(row1[i] == TRUE){
+      index <- c(index,i)
+    }
+  }
+  
+ n <- dim(dataset)[1]
+  n1 <- length(index)
+  removeindex <- c()
+  
+  for (j in 1:n) {
+    if(identical(dataset[j, index], rep(FALSE, n1)) == TRUE){
+      removeindex <- c(removeindex, j)
+    }
+  }
+  if(length(removeindex) == 0){
+    return(dataset)
+  }else{
+  return(dataset[-removeindex,])
+  }
+}
+
+
+#Probability
+probability <- function(rec){
+  n <- length(rec)
+  distribution <- c()
+  for (i in 1:n) {
+    distribution <- c(distribution, data$AlbumPopularity[data$TrackID == rec[i]])
+  }
+  distribution <- distribution/sum(distribution)
+  return(distribution)
+}
+
+
+#Convertor
+convertid <- function(trackid){
+  artist <- as.character(data$Artist[data$TrackID == trackid])
+  track <- as.character(data$TrackName[data$TrackID == trackid])
+  album <- as.character(data$AlbumName[data$TrackID == trackid])
+  result <- paste(artist, ":", album, ":", track)
+  print(result)
+}
+
+
+#Main Code
+main <- function(trackid){
+  x <- extract(trackid)
+  standardizedata <- standardize(data[,c(16,17,19,21:26)]) #we must standardize the data set before subsetting
+  data_album <- data[delete_same_album(trackid, data),] #delete tracks within the same album
+  data1 <- data_album[decade_data(trackid, data_album),] #subset the data within the nearest 10 years
+ 
+  if(dim(genresubset(trackid, data1))[1] != 0){
+    data1 <- genresubset(trackid,data1)
+  } #choose the songs that are within the nearest decade and have at least one common genre, provided such tracks exist
+  
+  train.index1 <- which(data$TrackID %in% data1$TrackID)
+  train.X1 <- standardizedata[train.index1,]
+  train.X1 <- as.matrix(train.X1)
+  n1 <- dim(train.X1)[1]
+  distances.array1 <- rep(0,n1)
+
+    for (i in 1:n1){
+    distances.array1[i] <-distances.l2(x, as.vector(train.X1[i,]))
+    }
+  num1 <- min(5,n1)
+  shortest_distance1 <- sort(distances.array1)[1:num1]
+  neibourindex1 <- match(shortest_distance1, distances.array1) #this part use k-nearst-neibour algorithm
+  neibour1 <- as.character(data1[neibourindex1,]$TrackID)
+  
+  data2 <- data_album[-decade_data(trackid, data_album),]#here choose the tracks that are not in the '10-years period'
+  
+  if(dim(genresubset(trackid, data2))[1] != 0){
+    data1 <- genresubset(trackid,data2)
+  }
+  
+  train.index2 <- which(data$TrackID %in% data2$TrackID)
+  train.X2 <- standardizedata[train.index2, ]
+  train.X2 <- as.matrix(train.X2)
+  n2 <- dim(train.X2)[1]
+  distances.array2 <- rep(0,n2)
+  
+  for (j in 1:n2) {
+    distances.array2[j] <- distances.l2(x, as.vector(train.X2[j,]))
+  }
+  num2 <- min(5,n2)
+  shortest_distance2 <- sort(distances.array2)[1:num2]
+  neibourindex2<- match(shortest_distance2, distances.array2)
+  neibour2 <- as.character(data2[neibourindex2,]$TrackID)
+  
+  neibour <- c(neibour1, neibour2)
+  distribution <- probability(neibour)
+  sample <- sample(neibour, size = 5, replace = FALSE, prob = distribution)
+  
+  for (k in 1:5){
+    convertid(sample[k])
+  }
+}
+```
+## Task2 EDA
+### Load the data
+
+```{r eval = TRUE}
+data <- read.csv("cleanedData.csv")
+```
+
+```{r}
+
+theme_set(theme_pubr())
+```
+
+### Histograms and QQ-Plots for all the variables used in K-N-N
+We can use these plots to identify whether the corresponding variables follow Gaussian distribution or not.
+
+**TrackDanceability**
+```{r, eval=TRUE}
+h <- ggplot(data, aes(x=TrackDanceability)) + geom_histogram()
+q <- ggplot(data, aes(sample=TrackDanceability))+stat_qq() 
+figure <- ggarrange(h,q,
+                    labels = c("Histogram", "QQ-plot"),
+                    ncol = 2, nrow = 1)
+figure
+```
+
+**TrackEnergy**
+```{r}
+h <- ggplot(data, aes(x=TrackEnergy)) + geom_histogram()
+q <- ggplot(data, aes(sample=TrackEnergy))+stat_qq()
+figure <- ggarrange(h,q,
+                    labels = c("Histogram", "QQ-plot"),
+                    ncol = 2, nrow = 1)
+figure
+```
+
+**TrackLoudness**
+```{r}
+h <- ggplot(data, aes(x=TrackLoudness)) + geom_histogram()
+q <- ggplot(data, aes(sample=TrackLoudness))+stat_qq()
+figure <- ggarrange(h,q,
+                    labels = c("Histogram", "QQ-plot"),
+                    ncol = 2, nrow = 1)
+figure
+```
+
+**TrackSpeechiness**
+```{r}
+h <- ggplot(data, aes(x=TrackSpeechiness)) + geom_histogram()
+q <- ggplot(data, aes(sample=TrackSpeechiness))+stat_qq()
+figure <- ggarrange(h,q,
+                    labels = c("Histogram", "QQ-plot"),
+                    ncol = 2, nrow = 1)
+figure
+```
+
+**TrackAcousticness**
+```{r}
+h <- ggplot(data, aes(x=TrackAcousticness)) + geom_histogram()
+q <- ggplot(data, aes(sample=TrackAcousticness))+stat_qq()
+figure <- ggarrange(h,q,
+                    labels = c("Histogram", "QQ-plot"),
+                    ncol = 2, nrow = 1)
+figure
+```
+
+**TrackInstrumentalness**
+```{r}
+h <- ggplot(data, aes(x=TrackInstrumentalness)) + geom_histogram()
+q <- ggplot(data, aes(sample=TrackInstrumentalness))+stat_qq()
+figure <- ggarrange(h,q,
+                    labels = c("Histogram", "QQ-plot"),
+                    ncol = 2, nrow = 1)
+figure
+```
+
+**TrackLiveness**
+```{r}
+h <- ggplot(data, aes(x=TrackLiveness)) + geom_histogram()
+q <- ggplot(data, aes(sample=TrackLiveness))+stat_qq()
+figure <- ggarrange(h,q,
+                    labels = c("Histogram", "QQ-plot"),
+                    ncol = 2, nrow = 1)
+figure
+```
+
+**TrackValence**
+```{r}
+h <- ggplot(data, aes(x=TrackValence)) + geom_histogram()
+q <- ggplot(data, aes(sample=TrackValence))+stat_qq()
+figure <- ggarrange(h,q,
+                    labels = c("Histogram", "QQ-plot"),
+                    ncol = 2, nrow = 1)
+figure
+```
+
+**TrackTempo**
+```{r}
+h <- ggplot(data, aes(x=TrackTempo)) + geom_histogram()
+q <- ggplot(data, aes(sample=TrackTempo))+stat_qq()
+figure <- ggarrange(h,q,
+                    labels = c("Histogram", "QQ-plot"),
+                    ncol = 2, nrow = 1)
+figure
+```
+
+### Read the data
+```{r}
+data <- read.csv("cleanedData.csv")
+
+```
+
+```{r}
+ggplot(data = data, aes(x = Release_year, y = AlbumPopularity, col = isPop)) + geom_point(alpha=.3, size = 3)
+ggplot(data = data, aes(x = Release_year, y = AlbumPopularity, col = isRock)) + geom_point(alpha=.3, size = 3)
+ggplot(data = data, aes(x = Release_year, y = AlbumPopularity, col = isFolk)) + geom_point(alpha=.3, size = 3)
+ggplot(data = data, aes(x = Release_year, y = AlbumPopularity, col = isTechno)) + geom_point(alpha=.3, size = 3)
+ggplot(data = data, aes(x = Release_year, y = AlbumPopularity, col = isRap)) + geom_point(alpha=.3, size = 3)
+ggplot(data = data, aes(x = Release_year, y = AlbumPopularity, col = isJazz)) + geom_point(alpha=.3, size = 3)
+ggplot(data = data, aes(x = Release_year, y = AlbumPopularity, col = isIndie)) + geom_point(alpha=.3, size = 3)
+ggplot(data = data, aes(x = Release_year, y = AlbumPopularity, col = isMetal)) + geom_point(alpha=.3, size = 3)
+ggplot(data = data, aes(x = Release_year, y = AlbumPopularity, col = isBlues)) + geom_point(alpha=.3, size = 3)
+ggplot(data = data, aes(x = Release_year, y = AlbumPopularity, col = isPunk)) + geom_point(alpha=.3, size = 3)
+```
+
+
+TESTS 
+
+### Set up
+
+```{r}
+
+data <- read.csv("cleanedData.csv")
+mydata <- dplyr::select(data, ArtistID, AlbumID, TrackID, AlbumPopularity, TrackDanceability, TrackEnergy, TrackLoudness, TrackSpeechiness, TrackAcousticness, TrackInstrumentalness, TrackLiveness, TrackValence, TrackTempo)
+#source("ST344-Recommendation-System.R")
+```
+
+
+```{r eval = TRUE}
+v1 <- data$TrackID[data$Artist == "Shirley Bassey" & data$AlbumName == "Shirley Bassey"]
+main(as.character(sample(v1,1)))
+```
+
+```{r eval = TRUE}
+v2 <- data$TrackID[data$Artist == "Roy Orbison" & data$AlbumName == "In Dreams"]
+main(as.character(sample(v2,1)))
+```
+
+```{r eval = TRUE}
+v3 <- data$TrackID[data$Artist == "Pink Floyd" & data$AlbumName == "Meddle"]
+main(as.character(sample(v3,1)))
+```
+
+```{r eval = TRUE}
+v4 <- data$TrackID[data$Artist == "The Clash" & data$AlbumName == "London Calling"]
+main(as.character(sample(v4,1)))
+```
+
+```{r eval = TRUE}
+v5 <- data$TrackID[data$Artist == "Public Enemy" & data$AlbumName == "It Takes A Nation Of Millions To Hold Us Back"]
+main(as.character(sample(v5,1)))
+```
+
+```{r eval = TRUE}
+v6 <- data$TrackID[data$Artist == "Madness" & data$AlbumName == "Absolutely"]
+main(as.character(sample(v6,1)))
+```
+
+```{r eval = TRUE}
+v7 <- data$TrackID[data$Artist == "Massive Attack" & data$AlbumName == "Blue Lines"]
+main(as.character(sample(v7,1)))
+```
+
+```{r eval = TRUE}
+v8 <- data$TrackID[data$Artist == "The Chemical Brothers" & data$AlbumName == "Dig Your Own Hole"]
+main(as.character(sample(v8,1)))
+```
+
+```{r eval = TRUE}
+v9 <- data$TrackID[data$Artist == "The Flaming Lips" & data$AlbumName == "Yoshimi Battles The Pink Robots"]
+main(as.character(sample(v9,1)))
+```
+
+```{r eval = TRUE}
+v10 <- data$TrackID[data$Artist == "The Streets" & data$AlbumName == "Original Pirate Material"]
+main(as.character(sample(v10,1)))
+```
+
+```{r eval = TRUE}
+v11 <- data$TrackID[data$Artist == "Tinie Tempah" & data$AlbumName == "Disc-Overy"]
+main(as.character(sample(v11,1)))
+```
+
+```{r eval = TRUE}
+v12 <- data$TrackID[data$Artist == "Foals" & data$AlbumName == "What Went Down"]
+main(as.character(sample(v12,1)))
+```
+
+**Note that the five recommended tracks are sampled based on the distribution from the selected data subset**

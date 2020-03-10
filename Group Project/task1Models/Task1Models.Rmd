@@ -1,0 +1,216 @@
+---
+title: "Task1Models"
+author: '1716655'
+date: "25/11/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Libraries
+```{r Library, warning = FALSE, message=FALSE}
+library(rio)
+library(data.table)
+library(dplyr)
+library(pracma)
+library(glmnet)
+library(splus2R)
+library(robustHD)
+```
+## Implementation of knn. 
+```{r KNNImplementation}
+distances.l2 <- function(x,y)
+{
+  apply(y,1,function(p) apply(x,1,function(q) nthroot(sum((p-q)^2),2)))
+ }
+
+distances.l1 <- function(x,y) {
+  apply(y,1,function(p) apply(x,1,function(q) sum(abs(p-q))))
+}
+
+
+knn.regression.test <- function(k,train.X,train.Y,test.X,test.Y,distances)
+{
+  estimates <- vector()
+  dist <-  distances(train.X, test.X)
+  #Go through each data point to be tested 
+  #and create a vector holding the responses of the k nearest neighbours
+  for(each in 1:dim(test.X)[1])
+  {
+    adjacency <- data.frame(train.Y, dist[,each])
+    colnames(adjacency) <- c("Train", "Distances")
+    adjacency <- adjacency[order(adjacency$Distances),]
+    
+    #Calculate distance weighted mean
+    
+    dis <- 0
+    weightDis <- 0
+    for(i in 1:k)
+    {
+      dis <- dis + 1/adjacency$Distances[i]
+      weightDis <- weightDis + 1/(adjacency$Distances[i]) * adjacency$Train[i] 
+    }
+    estimates[each] = weightDis/dis
+  }
+  
+  print(sum((test.Y-estimates)^2))
+  return(estimates)
+}
+```
+
+```{r ImportData}
+SourceData <- import("cleanedData.csv", setclass= "tibble")
+
+TestAlbums <- c("Shirley Bassey", "In Dreams","Meddle","London Calling",
+                "It Takes A Nation Of Millions To Hold Us Back",
+                "Absolutely", "Blue Lines","Dig Your Own Hole", "Yoshimi Battles The Pink Robots", 
+                "Original Pirate Material",
+                "Disc-Overy", "What Went Down")
+```
+
+## Runs KNN. 
+```{r knnCleaner, warning= FALSE}
+myData <- {SourceData %>% 
+    group_by(AlbumName,AlbumPopularity ,
+             Release_year, Release_month, Season, isPop, isFolk, 
+             isRock, isIndie, isTechno, isRap, isJazz, isMetal, isBlues, isPunk) %>% 
+    summarize(AlbumLoudness = mean(TrackLoudness),		
+              AlbumTempo = mean(TrackTempo),
+              AlbumAvgDuration = mean(TrackDuration),		
+              AlbumDanceability = mean(TrackDanceability),
+              AlbumEnergy = mean(TrackEnergy),
+              AlbumKey = mean(TrackKey),		
+              AlbumSpeechiness = mean(TrackSpeechiness),
+              AlbumAcousticness = mean(TrackAcousticness),
+              AlbumInstrumentalness = mean(TrackInstrumentalness),		
+              AlbumLiveness = mean(TrackLiveness),
+              AlbumValence = mean(TrackValence),
+              AlbumTimeSignature = mean(TrackTimeSignature),
+              AlbumTempo = mean(TrackTempo)
+    )}
+##Commented out code can run the other models. 
+myData <- ungroup(myData)
+#Best Model
+#myData <- select(myData, -AlbumAvgDuration, -AlbumKey, -AlbumSpeechiness,-AlbumTimeSignature)
+#test2 Model
+
+#myData <- select(myData, -AlbumAvgDuration, -AlbumKey, -AlbumSpeechiness,-AlbumTimeSignature, -AlbumDanceability)
+#test2 Model
+
+myData <- select(myData, -AlbumAvgDuration, -AlbumKey,-AlbumTimeSignature, -isPop, -isFolk, 
+                 -isRock, -isIndie, -isTechno, -isRap, -isJazz, -isMetal, -isBlues, -isPunk)
+
+for (each in 3:dim(myData)[2])
+{
+  if (!is.number(myData[1,each]))
+  {
+    myData[,each] <- as.numeric(as.factor(unlist(myData[,each])))
+  }
+  myData[,each] <- standardize(myData[,each])
+  
+}
+
+TestData <- filter(myData, AlbumName %in% TestAlbums)
+TestData <- select(TestData, -AlbumName)
+TrainData <- filter(myData, !AlbumName %in% TestAlbums)
+TrainData <- select(TrainData, -AlbumName)
+train.X <- as.matrix(select(TrainData, -AlbumPopularity))
+train.Y <- as.matrix(select(TrainData, AlbumPopularity))
+test.X <- as.matrix(select(TestData, -AlbumPopularity))
+test.Y <- select(TestData, AlbumPopularity)
+
+goodness <- vector()
+for(k in 1:20)
+{
+  #print(k)
+  goodness[k] <- knn.regression.test(k,train.X,train.Y,test.X,test.Y, distances.l2)
+}
+#print(which.min(goodness))
+
+est <- knn.regression.test(2,train.X,train.Y,test.X,test.Y, distances.l2)
+data.frame(est, test.Y, test.Y - est)
+
+
+```
+
+#Code to test ridge regression.
+Output is very close to the null model
+```{r Ridge}
+lambdas <- 10^seq(2, -2, by = -.2)
+ridge <- glmnet(y = train.Y, x = train.X, lambda = lambdas)
+lambdaFind <- cv.glmnet(y = train.Y, x = train.X, alpha = 0, lambda = lambdas)
+optimalLambda <- lambdaFind$lambda.min
+estimates <- predict(ridge, s = optimalLambda, newx = test.X)
+print("Ridge regression")
+print(sum(((test.Y-estimates)^2)))
+```
+
+#Code to create and test a number of linear models
+```{r LinearModel}
+
+myData <- {SourceData %>% 
+    group_by(AlbumName, ArtistPopularity, ArtistNumFollowers, 
+             AlbumBestChartPosition, AlbumWeeksOnChart, AlbumWeeksNumberOne,
+             AlbumPopularity, Release_year, Release_month, Season, isPop, isFolk, 
+             isRock, isIndie, isTechno, isRap, isJazz, isMetal, isBlues, isPunk) %>% 
+    summarize(AlbumLoudness = mean(TrackLoudness),		
+              AlbumTempo = mean(TrackTempo),
+              AlbumAvgDuration = mean(TrackDuration),		
+              AlbumDanceability = mean(TrackDanceability),
+              AlbumEnergy = mean(TrackEnergy),
+              AlbumKey = mean(TrackKey),		
+              AlbumSpeechiness = mean(TrackSpeechiness),
+              AlbumAcousticness = mean(TrackAcousticness),
+              AlbumInstrumentalness = mean(TrackInstrumentalness),		
+              AlbumLiveness = mean(TrackLiveness),
+              AlbumValence = mean(TrackValence),
+              AlbumTimeSignature = mean(TrackTimeSignature),
+              
+              AlbumTempo = mean(TrackTempo)
+    )}
+myData <- ungroup(myData)
+TestData <- filter(myData, AlbumName %in% TestAlbums)
+TestData <- select(TestData, -AlbumName)
+TrainData <- filter(myData, !AlbumName %in% TestAlbums)
+TrainData <- select(TrainData, -AlbumName)
+
+train.X <- as.matrix(select(TrainData, -AlbumPopularity))
+train.Y <- as.matrix(select(TrainData, AlbumPopularity))
+test.X <- as.matrix(select(TestData, -AlbumPopularity))
+test.Y <- select(TestData, AlbumPopularity)
+#
+Model1  <-  lm((AlbumPopularity) ~ AlbumAcousticness +AlbumValence  + AlbumDanceability + isPunk +isBlues + isJazz+ isRock + isPop,data = TrainData)
+print(sum((predict(Model1, TestData) - test.Y)^2))
+data.frame(test.Y, predict(Model1, TestData), (predict(Model1, TestData) - test.Y))
+
+Model2  <-  lm((AlbumPopularity) ~ ArtistPopularity+AlbumAcousticness +AlbumValence + AlbumDanceability + isPunk +isBlues + isJazz+ isRock + isPop + isFolk +isRap,data = TrainData)
+print(sum((predict(Model2, TestData) - test.Y)^2))
+data.frame(test.Y, predict(Model2, TestData), (predict(Model2, TestData) - test.Y))
+
+Model3  <-  lm((AlbumPopularity) ~ ArtistPopularity+ArtistNumFollowers,data = TrainData)
+print(sum((predict(Model3, TestData) - test.Y)^2))
+data.frame(test.Y, predict(Model3, TestData), (predict(Model3, TestData) - test.Y))
+
+Model4  <-  lm((AlbumPopularity) ~ AlbumLoudness+	AlbumTempo + AlbumAvgDuration +		
+                   AlbumDanceability+ AlbumEnergy +AlbumSpeechiness +
+                   AlbumAcousticness + AlbumInstrumentalness+	AlbumLiveness+
+                   AlbumValence + AlbumTempo, data = TrainData)
+print(sum((predict(Model4, TestData) - test.Y)^2))
+data.frame(test.Y, predict(Model4, TestData), (predict(Model4, TestData) - test.Y))
+
+
+Model5  <-  lm((AlbumPopularity) ~ AlbumAcousticness +AlbumValence + AlbumDanceability + Release_year+
+                     AlbumTempo+AlbumLoudness+AlbumAvgDuration+AlbumLiveness+AlbumTimeSignature+
+                     AlbumKey, data = TrainData)
+print(sum((predict(Model5, TestData) - test.Y)^2))
+data.frame(test.Y, predict(Model5, TestData), (predict(Model5, TestData) - test.Y))
+
+AllModel <- lm(AlbumPopularity ~. ,data = TrainData)
+print(sum((predict(AllModel, TestData) - test.Y)^2))
+data.frame(test.Y, predict(AllModel, TestData), (predict(AllModel, TestData) - test.Y))
+
+
+```
+

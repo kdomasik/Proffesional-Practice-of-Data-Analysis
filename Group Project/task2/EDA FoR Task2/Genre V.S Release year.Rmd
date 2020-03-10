@@ -1,0 +1,29 @@
+---
+title: "Relationship Between Genres and Release Year"
+author: "Group6"
+date: "26/11/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Read the data
+```{r}
+data <- read.csv("cleanedData.csv")
+library(ggplot2)
+```
+
+```{r}
+ggplot(data = data, aes(x = Release_year, y = AlbumPopularity, col = isPop)) + geom_point(alpha=.3, size = 3)
+ggplot(data = data, aes(x = Release_year, y = AlbumPopularity, col = isRock)) + geom_point(alpha=.3, size = 3)
+ggplot(data = data, aes(x = Release_year, y = AlbumPopularity, col = isFolk)) + geom_point(alpha=.3, size = 3)
+ggplot(data = data, aes(x = Release_year, y = AlbumPopularity, col = isTechno)) + geom_point(alpha=.3, size = 3)
+ggplot(data = data, aes(x = Release_year, y = AlbumPopularity, col = isRap)) + geom_point(alpha=.3, size = 3)
+ggplot(data = data, aes(x = Release_year, y = AlbumPopularity, col = isJazz)) + geom_point(alpha=.3, size = 3)
+ggplot(data = data, aes(x = Release_year, y = AlbumPopularity, col = isIndie)) + geom_point(alpha=.3, size = 3)
+ggplot(data = data, aes(x = Release_year, y = AlbumPopularity, col = isMetal)) + geom_point(alpha=.3, size = 3)
+ggplot(data = data, aes(x = Release_year, y = AlbumPopularity, col = isBlues)) + geom_point(alpha=.3, size = 3)
+ggplot(data = data, aes(x = Release_year, y = AlbumPopularity, col = isPunk)) + geom_point(alpha=.3, size = 3)
+```

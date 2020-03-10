@@ -1,0 +1,115 @@
+---
+title: "EDA For Task2"
+author: "Group6"
+date: "26/11/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+### Load the data
+
+```{r eval = TRUE}
+data <- read.csv("cleanedData.csv")
+```
+
+```{r}
+library(ggplot2)
+library(ggpubr)
+theme_set(theme_pubr())
+```
+
+### Histograms and QQ-Plots for all the variables used in K-N-N
+We can use these plots to identify whether the corresponding variables follow Gaussian distribution or not.
+
+**TrackDanceability**
+```{r, eval=TRUE}
+h <- ggplot(data, aes(x=TrackDanceability)) + geom_histogram()
+q <- ggplot(data, aes(sample=TrackDanceability))+stat_qq() 
+figure <- ggarrange(h,q,
+                    labels = c("Histogram", "QQ-plot"),
+                    ncol = 2, nrow = 1)
+figure
+```
+
+**TrackEnergy**
+```{r}
+h <- ggplot(data, aes(x=TrackEnergy)) + geom_histogram()
+q <- ggplot(data, aes(sample=TrackEnergy))+stat_qq()
+figure <- ggarrange(h,q,
+                    labels = c("Histogram", "QQ-plot"),
+                    ncol = 2, nrow = 1)
+figure
+```
+
+**TrackLoudness**
+```{r}
+h <- ggplot(data, aes(x=TrackLoudness)) + geom_histogram()
+q <- ggplot(data, aes(sample=TrackLoudness))+stat_qq()
+figure <- ggarrange(h,q,
+                    labels = c("Histogram", "QQ-plot"),
+                    ncol = 2, nrow = 1)
+figure
+```
+
+**TrackSpeechiness**
+```{r}
+h <- ggplot(data, aes(x=TrackSpeechiness)) + geom_histogram()
+q <- ggplot(data, aes(sample=TrackSpeechiness))+stat_qq()
+figure <- ggarrange(h,q,
+                    labels = c("Histogram", "QQ-plot"),
+                    ncol = 2, nrow = 1)
+figure
+```
+
+**TrackAcousticness**
+```{r}
+h <- ggplot(data, aes(x=TrackAcousticness)) + geom_histogram()
+q <- ggplot(data, aes(sample=TrackAcousticness))+stat_qq()
+figure <- ggarrange(h,q,
+                    labels = c("Histogram", "QQ-plot"),
+                    ncol = 2, nrow = 1)
+figure
+```
+
+**TrackInstrumentalness**
+```{r}
+h <- ggplot(data, aes(x=TrackInstrumentalness)) + geom_histogram()
+q <- ggplot(data, aes(sample=TrackInstrumentalness))+stat_qq()
+figure <- ggarrange(h,q,
+                    labels = c("Histogram", "QQ-plot"),
+                    ncol = 2, nrow = 1)
+figure
+```
+
+**TrackLiveness**
+```{r}
+h <- ggplot(data, aes(x=TrackLiveness)) + geom_histogram()
+q <- ggplot(data, aes(sample=TrackLiveness))+stat_qq()
+figure <- ggarrange(h,q,
+                    labels = c("Histogram", "QQ-plot"),
+                    ncol = 2, nrow = 1)
+figure
+```
+
+**TrackValence**
+```{r}
+h <- ggplot(data, aes(x=TrackValence)) + geom_histogram()
+q <- ggplot(data, aes(sample=TrackValence))+stat_qq()
+figure <- ggarrange(h,q,
+                    labels = c("Histogram", "QQ-plot"),
+                    ncol = 2, nrow = 1)
+figure
+```
+
+**TrackTempo**
+```{r}
+h <- ggplot(data, aes(x=TrackTempo)) + geom_histogram()
+q <- ggplot(data, aes(sample=TrackTempo))+stat_qq()
+figure <- ggarrange(h,q,
+                    labels = c("Histogram", "QQ-plot"),
+                    ncol = 2, nrow = 1)
+figure
+```
+

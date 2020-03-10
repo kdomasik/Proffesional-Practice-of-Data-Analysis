@@ -1,0 +1,129 @@
+---
+title: "Cleaner"
+author: '1716655'
+date: "26/11/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r libraries}
+library(lubridate)
+library(dplyr)
+library(rio)
+library(data.table)
+library(ggplot2)
+library(xlsx)
+```
+
+#Code to reformat dates
+Please note the additional dates were added manually, so the modified dataset already includes them. 
+This code reformats dates. 
+```{r ChangeDate}
+edited_spotify_clean_dates$AlbumReleaseDate = parse_date_time(edited_spotify_clean_dates$AlbumReleaseDate,orders=c("y","ym","ymd"))
+data1 <- edited_spotify %>% dplyr::mutate(Release_year = lubridate::year(edited_spotify_clean_dates$AlbumReleaseDate), 
+                Release_month = lubridate::month(edited_spotify_clean_dates$AlbumReleaseDate), 
+                Release_day = lubridate::day(edited_spotify_clean_dates$AlbumReleaseDate))
+
+data2 <- select (data1,-c(AlbumReleaseDate, Release_day))
+
+Season <- data2$Release_month
+
+Season[Season %in% 12] <- "winter"
+Season[Season %in% 1] <- "winter"
+Season[Season %in% 2] <- "winter"
+Season[Season %in% 3] <- "spring"
+Season[Season %in% 4] <- "spring"
+Season[Season %in% 5] <- "spring"
+Season[Season %in% 6] <- "summer"
+Season[Season %in% 7] <- "summer"
+Season[Season %in% 8] <- "summer"
+Season[Season %in% 9] <- "autumn"
+Season[Season %in% 10] <- "autumn"
+Season[Season %in% 11] <- "autumn"
+
+data2 <- cbind(data2, Season)
+
+data2$Release_month[data2$Release_month %in% 1] <- "January"
+data2$Release_month[data2$Release_month %in% 2] <- "February"
+data2$Release_month[data2$Release_month %in% 3] <- "March"
+data2$Release_month[data2$Release_month %in% 4] <- "April"
+data2$Release_month[data2$Release_month %in% 5] <- "May"
+data2$Release_month[data2$Release_month %in% 6] <- "June"
+data2$Release_month[data2$Release_month %in% 7] <- "July"
+data2$Release_month[data2$Release_month %in% 8] <- "August"
+data2$Release_month[data2$Release_month %in% 9] <- "September"
+data2$Release_month[data2$Release_month %in% 10] <- "October"
+data2$Release_month[data2$Release_month %in% 11] <- "November"
+data2$Release_month[data2$Release_month %in% 12] <- "December"
+
+```
+
+
+The below code adds genres to the cleaned data, and exports it as a csv. The index column should be manually deleted from the clean data. 
+```{r genres}
+
+myData <- data2
+
+Genres <- myData$ArtistGenres
+Genre <- vector(mode = "list", 1)
+count = 1
+for(each in Genres)
+{
+  for(i in as.list(strsplit(each, ",")[[1]]))
+  {
+    Genre[count] = i
+    count = count + 1
+  }
+}
+Genre <- unique(Genre)
+
+addCol <- function(myData, names, isName, Genre)
+{
+  isGenre <- as.list(grep(paste(names,collapse="|"), Genre, value=TRUE))
+  isGenre <- unique(isGenre)
+  numberCol <- ncol(myData) + 1
+  for(each in 1:length(myData$Artist))
+  {
+    myData[each, numberCol] =  length(intersect(as.list(strsplit(myData[each, 4][[1]], ",")[[1]]), isGenre)) > 0
+  }
+  colnames(myData)[numberCol] <- paste (isName, sep = "_", collapse = NULL)
+  return(myData)
+}
+##Below Code is used to analyse which genres are ignored/not included by the genre aggregation. 
+# reducedGenre <- Genre[! Genre  %in% as.list(grep("pop", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("rock", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("folk", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("country", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("electro", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("techno", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("hip hop", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("grime", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("rap", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("jazz", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("punk", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("soul", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("metal", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("blues", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("indie", Genre, value=TRUE))]
+# reducedGenre <- reducedGenre[! reducedGenre  %in% as.list(grep("dance", Genre, value=TRUE))]
+# reducedGenre <- unique(reducedGenre)
+
+myData <- addCol(myData, c("pop"), "isPop",Genre)
+myData <- addCol(myData, c("rock"), "isRock",Genre)
+myData <- addCol(myData, c("folk", "country"), "isFolk",Genre)
+myData <- addCol(myData, c("electro", "techno"), "isTechno",Genre)
+myData <- addCol(myData, c("hip hop","grime", "rap"), "isRap",Genre)
+myData <- addCol(myData, c("jazz"), "isJazz",Genre)
+myData <- addCol(myData, c("indie"), "isIndie",Genre)
+myData <- addCol(myData, c("metal"), "isMetal",Genre)
+myData <- addCol(myData, c("blues", "r&b", "soul"), "isBlues",Genre)
+myData <- addCol(myData, c("punk"), "isPunk",Genre)
+
+write.csv(myData, file = "cleanedData.csv")
+
+```
+

@@ -1,0 +1,20 @@
+---
+title: "ST340 Lab 5: Bandit problems"
+date: "2019--20"
+output: pdf_document
+---
+
+```{r}
+library(rio)
+library(dplyr)
+data <- import("cleanedData.xlsx", setclass = "tibble")
+
+corr <- select(data, ArtistPopularity, ArtistNumFollowers, AlbumWeeksOnChart, AlbumWeeksNumberOne, AlbumPopularity, TrackDuration, TrackDanceability, TrackEnergy, TrackKey,TrackMode, TrackSpeechiness, TrackAcousticness, TrackInstrumentalness, TrackLiveness, TrackValence, TrackTempo, TrackTimeSignature)
+head(corr)
+cor(corr)
+```
+
+```{r}
+library("Hmisc")
+rcorr(as.matrix(corr))
+```
