@@ -1,0 +1,704 @@
+---
+title: "Technical Appendix"
+author: '1632905'
+date: "4 03 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+```
+
+Loading required libraries.
+```{r libraries, message = FALSE, warning=FALSE}
+library(rio)
+library(dplyr)
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(gridExtra)
+library(xts)
+library(tidyr)
+library(ggcorrplot)
+
+```
+
+Data was taken from different releases which need to be pre-processed individually because of slight differences in the structure. 
+
+Pre-processign fo the older data.
+```{r older data, message = FALSE}
+#importing datasets
+
+monthYears2 <- paste0(month.abb[c(11:12, 1:10)], c(rep(17, 2), rep(18,10)))
+d2 <-list()
+for  (i in 1:length(monthYears2)) {
+  filename2 <- paste0("Appointments_GP_Oct18/CCG_CSV_", monthYears2[i], ".csv")
+  d2[[i]] <-  import(filename2, setclass = "tibble")
+}
+covData17 <- tibble()
+for (i in 1:length(monthYears2)) {
+  covData17 <- rbind(covData17, filter(d2[[i]], CCG_NAME=="NHS Coventry and Rugby CCG"))
+}
+write.csv(covData17, "covData17.csv")
+
+
+#selecting interesting features
+covData17a <- select(covData17, CCG_CODE, APPOINTMENT_DATE, APPOINTMENT_STATUS, HCP_TYPE, APPOINTMENT_MODE,
+                   TIME_BETWEEN_BOOK_AND_APPT, COUNT_OF_APPOINTMENTS)
+
+
+# unifying the date format
+for (i in 1:length(covData17a$APPOINTMENT_DATE)) {
+  if (substr(covData17a$APPOINTMENT_DATE[i], 4, 6) == "Jan"){
+    covData17a$APPOINTMENT_DATE[i] <- paste0(substr(covData17a$APPOINTMENT_DATE[i], 0, 2), "/01/",20,  substr(covData17a$APPOINTMENT_DATE[i], 8, 11))
+  }
+  else if (substr(covData17a$APPOINTMENT_DATE[i], 4, 6) == "Feb"){
+    covData17a$APPOINTMENT_DATE[i] <- paste0(substr(covData17a$APPOINTMENT_DATE[i], 0, 2), "/02/",20,  substr(covData17a$APPOINTMENT_DATE[i], 8, 11))
+  }
+  else if (substr(covData17a$APPOINTMENT_DATE[i], 4, 6) == "Mar"){
+    covData17a$APPOINTMENT_DATE[i] <- paste0(substr(covData17a$APPOINTMENT_DATE[i], 0, 2), "/03/",20,  substr(covData17a$APPOINTMENT_DATE[i], 8, 11))
+  }
+  else if (substr(covData17a$APPOINTMENT_DATE[i], 4, 6) == "Apr"){
+    covData17a$APPOINTMENT_DATE[i] <- paste0(substr(covData17a$APPOINTMENT_DATE[i], 0, 2), "/04/",20,  substr(covData17a$APPOINTMENT_DATE[i], 8, 11))
+  }
+  else if (substr(covData17a$APPOINTMENT_DATE[i], 4, 6) == "May"){
+    covData17a$APPOINTMENT_DATE[i] <- paste0(substr(covData17a$APPOINTMENT_DATE[i], 0, 2), "/05/",20,  substr(covData17a$APPOINTMENT_DATE[i], 8, 11))
+  }
+  else if (substr(covData17a$APPOINTMENT_DATE[i], 4, 6) == "Jun"){
+    covData17a$APPOINTMENT_DATE[i] <- paste0(substr(covData17a$APPOINTMENT_DATE[i], 0, 2), "/06/",20,  substr(covData17a$APPOINTMENT_DATE[i], 8, 11))
+  }
+  else if (substr(covData17a$APPOINTMENT_DATE[i], 4, 6) == "Jul"){
+    covData17a$APPOINTMENT_DATE[i] <- paste0(substr(covData17a$APPOINTMENT_DATE[i], 0, 2), "/07/",20,  substr(covData17a$APPOINTMENT_DATE[i], 8, 11))
+  }
+  else if (substr(covData17a$APPOINTMENT_DATE[i], 4, 6) == "Aug"){
+    covData17a$APPOINTMENT_DATE[i] <- paste0(substr(covData17a$APPOINTMENT_DATE[i], 0, 2), "/08/",20,  substr(covData17a$APPOINTMENT_DATE[i], 8, 11))
+  }
+  else if (substr(covData17a$APPOINTMENT_DATE[i], 4, 6) == "Sep"){
+    covData17a$APPOINTMENT_DATE[i] <- paste0(substr(covData17a$APPOINTMENT_DATE[i], 0, 2), "/09/",20,  substr(covData17a$APPOINTMENT_DATE[i], 8, 11))
+  }
+  else if (substr(covData17a$APPOINTMENT_DATE[i], 4, 6) == "Oct"){
+    covData17a$APPOINTMENT_DATE[i] <- paste0(substr(covData17a$APPOINTMENT_DATE[i], 0, 2), "/10/",20,  substr(covData17a$APPOINTMENT_DATE[i], 8, 11))
+  }
+  else if (substr(covData17a$APPOINTMENT_DATE[i], 4, 6) == "Nov"){
+    covData17a$APPOINTMENT_DATE[i] <- paste0(substr(covData17a$APPOINTMENT_DATE[i], 0, 2), "/11/",20,  substr(covData17a$APPOINTMENT_DATE[i], 8, 11))
+  }
+  else if (substr(covData17a$APPOINTMENT_DATE[i], 4, 6) == "Dec"){
+    covData17a$APPOINTMENT_DATE[i] <- paste0(substr(covData17a$APPOINTMENT_DATE[i], 0, 2), "/12/",20,  substr(covData17a$APPOINTMENT_DATE[i], 8, 11))
+  }
+}
+covData17a$Weekday <- wday(dmy(covData17a$APPOINTMENT_DATE))
+covData17a$Weekday <- recode(covData17a$Weekday, 
+                                "1"="Sunday",
+                                "2"="Monday",
+                                "3"="Tuesday",
+                                "4"="Wednesday",
+                                "5"="Thursday",
+                                "6"="Friday",
+                                "7"="Saturday")
+
+# summing the data over days
+sumData17 <- aggregate(covData17a$COUNT_OF_APPOINTMENTS, by=list(Appointment_Date=covData17a$APPOINTMENT_DATE), FUN=sum)
+
+# unifying th date format
+sumData17$Weekday <- wday(dmy(sumData17$Appointment_Date))
+sumData17$Weekday <- recode(sumData17$Weekday, 
+                          "1"="Sunday",
+                          "2"="Monday",
+                          "3"="Tuesday",
+                          "4"="Wednesday",
+                          "5"="Thursday",
+                          "6"="Friday",
+                          "7"="Saturday")
+
+
+
+# plotting the relationship between appointments and weekday
+sumData17$Appointment_Date <- dmy(sumData17$Appointment_Date)
+ggplot(sumData17, aes(x = Appointment_Date, y = x, color = Weekday)) + geom_jitter() + labs(y = "Visits per day", x = "Date")
+Weekmean17 <- aggregate(sumData17$x, by=list(a = sumData17$Weekday), FUN = mean)
+
+
+
+# importing the coverage dataset
+coverage17 <- import("Appointments_GP_Oct18/APPOINTMENTS_GP_COVERAGE.csv")
+coverage17 <- coverage17[which(coverage17$COMMISSIONER_ORGANISATION_CODE == "05A"),]
+
+for (i in 1:length(coverage17$Appointment_Month)) {
+  if (substr(coverage17$Appointment_Month[i], 4, 6) == "Jan"){
+    coverage17$Appointment_Month[i] <- paste0(substr(coverage17$Appointment_Month[i], 0, 2), "/01/",20,  substr(coverage17$Appointment_Month[i], 8, 11))
+  }
+  else if (substr(coverage17$Appointment_Month[i], 4, 6) == "Feb"){
+    coverage17$Appointment_Month[i] <- paste0(substr(coverage17$Appointment_Month[i], 0, 2), "/02/",20,  substr(coverage17$Appointment_Month[i], 8, 11))
+  }
+  else if (substr(coverage17$Appointment_Month[i], 4, 6) == "Mar"){
+    coverage17$Appointment_Month[i] <- paste0(substr(coverage17$Appointment_Month[i], 0, 2), "/03/",20,  substr(coverage17$Appointment_Month[i], 8, 11))
+  }
+  else if (substr(coverage17$Appointment_Month[i], 4, 6) == "Apr"){
+    coverage17$Appointment_Month[i] <- paste0(substr(coverage17$Appointment_Month[i], 0, 2), "/04/",20,  substr(coverage17$Appointment_Month[i], 8, 11))
+  }
+  else if (substr(coverage17$Appointment_Month[i], 4, 6) == "May"){
+    coverage17$Appointment_Month[i] <- paste0(substr(coverage17$Appointment_Month[i], 0, 2), "/05/",20,  substr(coverage17$Appointment_Month[i], 8, 11))
+  }
+  else if (substr(coverage17$Appointment_Month[i], 4, 6) == "Jun"){
+    coverage17$Appointment_Month[i] <- paste0(substr(coverage17$Appointment_Month[i], 0, 2), "/06/",20,  substr(coverage17$Appointment_Month[i], 8, 11))
+  }
+  else if (substr(coverage17$Appointment_Month[i], 4, 6) == "Jul"){
+    coverage17$Appointment_Month[i] <- paste0(substr(coverage17$Appointment_Month[i], 0, 2), "/07/",20,  substr(coverage17$Appointment_Month[i], 8, 11))
+  }
+  else if (substr(coverage17$Appointment_Month[i], 4, 6) == "Aug"){
+    coverage17$Appointment_Month[i] <- paste0(substr(coverage17$Appointment_Month[i], 0, 2), "/08/",20,  substr(coverage17$Appointment_Month[i], 8, 11))
+  }
+  else if (substr(coverage17$Appointment_Month[i], 4, 6) == "Sep"){
+    coverage17$Appointment_Month[i] <- paste0(substr(coverage17$Appointment_Month[i], 0, 2), "/09/",20,  substr(coverage17$Appointment_Month[i], 8, 11))
+  }
+  else if (substr(coverage17$Appointment_Month[i], 4, 6) == "Oct"){
+    coverage17$Appointment_Month[i] <- paste0(substr(coverage17$Appointment_Month[i], 0, 2), "/10/",20,  substr(coverage17$Appointment_Month[i], 8, 11))
+  }
+  else if (substr(coverage17$Appointment_Month[i], 4, 6) == "Nov"){
+    coverage17$Appointment_Month[i] <- paste0(substr(coverage17$Appointment_Month[i], 0, 2), "/11/",20,  substr(coverage17$Appointment_Month[i], 8, 11))
+  }
+  else if (substr(coverage17$Appointment_Month[i], 4, 6) == "Dec"){
+    coverage17$Appointment_Month[i] <- paste0(substr(coverage17$Appointment_Month[i], 0, 2), "/12/",20,  substr(coverage17$Appointment_Month[i], 8, 11))
+  }
+}
+
+
+
+# merging coverage with covData
+covData17a$patients <- list(0)
+covData17a$all_patients <- list(0)
+covData17a$ratio_patients <- list(0)
+
+for (i in 1:nrow(coverage17)) {
+  for (j in 1:nrow(covData17a)) {
+    if(substr(coverage17$Appointment_Month[i], 4, 11) == substr(covData17a$APPOINTMENT_DATE[j], 4, 11)) {
+      covData17a$patients[j] <- coverage17$`Patients registered at included practices`[i]
+      covData17a$all_patients[j] <- coverage17$`Patients registered at open practices`[i]
+    }
+      
+  }
+}
+covData17a$ratio_patients <- as.numeric(covData17a$patients)/as.numeric(covData17a$all_patients)
+
+
+
+# preparing covdatafor a merger
+names(covData17a)[2] <- "Appointment_Date"
+names(covData17a)[3] <- "APPT_STATUS"
+names(covData17a)[5] <- "APPT_MODE"
+
+
+#write covData17 as a csv
+covData17a$patients <- unlist(covData17a$patients)
+covData17a$all_patients <- unlist(covData17a$all_patients)
+
+write.csv(covData17a, "old_data.csv", row.names = FALSE)
+
+
+
+
+```
+
+Pre-processing of the newer data.
+```{r newer data, message = FALSE}
+##importing the dataset from csv file
+
+monthYears <- paste0(month.abb[c(3:12, 1:12)], "_", c(rep(18, 10), rep(19, 12)))
+d <-list()
+for  (i in 1:length(monthYears)) {
+  filename <- paste0("Appointments_GP_Daily_Aug19/CCG_CSV_", monthYears[i], ".csv")
+  d[[i]] <-  import(filename, setclass = "tibble")
+}
+
+##filetring dataset to get only data from COventry and Rugby
+covData <- tibble()
+for (i in 1:length(monthYears)) {
+  covData <- rbind(covData, filter(d[[i]], CCG_NAME=="NHS Coventry and Rugby CCG"))
+}
+write.csv(covData, "covData.csv")
+
+
+#selecting variables
+
+covData1 <- select(covData, CCG_CODE, Appointment_Date, APPT_STATUS, HCP_TYPE, APPT_MODE,
+                   TIME_BETWEEN_BOOK_AND_APPT, COUNT_OF_APPOINTMENTS)
+
+# unifying the date format
+
+for (i in 1:length(covData1$Appointment_Date)) {
+  if (substr(covData1$Appointment_Date[i], 3, 5) == "JAN"){
+    covData1$Appointment_Date[i] <- paste0(substr(covData1$Appointment_Date[i], 0, 2), "/01/", substr(covData1$Appointment_Date[i], 6, 9))
+  }
+  else if (substr(covData1$Appointment_Date[i], 3, 5) == "FEB") {
+    covData1$Appointment_Date[i] <- paste0(substr(covData1$Appointment_Date[i], 0, 2), "/02/", substr(covData1$Appointment_Date[i], 6, 9))
+    
+  }
+  else if (substr(covData1$Appointment_Date[i], 3, 5) == "MAR") {
+    covData1$Appointment_Date[i] <- paste0(substr(covData1$Appointment_Date[i], 0, 2), "/03/", substr(covData1$Appointment_Date[i], 6, 9))
+    
+  }
+  else if (substr(covData1$Appointment_Date[i], 3, 5) == "APR") {
+    covData1$Appointment_Date[i] <- paste0(substr(covData1$Appointment_Date[i], 0, 2), "/04/", substr(covData1$Appointment_Date[i], 6, 9))
+    
+  }
+  else if (substr(covData1$Appointment_Date[i], 3, 5) == "MAY") {
+    covData1$Appointment_Date[i] <- paste0(substr(covData1$Appointment_Date[i], 0, 2), "/05/", substr(covData1$Appointment_Date[i], 6, 9))
+    
+  }
+  else if (substr(covData1$Appointment_Date[i], 3, 5) == "JUN") {
+    covData1$Appointment_Date[i] <- paste0(substr(covData1$Appointment_Date[i], 0, 2), "/06/", substr(covData1$Appointment_Date[i], 6, 9))
+    
+  }
+  else if (substr(covData1$Appointment_Date[i], 3, 5) == "JUL") {
+    covData1$Appointment_Date[i] <- paste0(substr(covData1$Appointment_Date[i], 0, 2), "/07/", substr(covData1$Appointment_Date[i], 6, 9))
+    
+  }
+  else if (substr(covData1$Appointment_Date[i], 3, 5) == "AUG") {
+    covData1$Appointment_Date[i] <- paste0(substr(covData1$Appointment_Date[i], 0, 2), "/08/", substr(covData1$Appointment_Date[i], 6, 9))
+    
+  }
+  else if (substr(covData1$Appointment_Date[i], 3, 5) == "SEP") {
+    covData1$Appointment_Date[i] <- paste0(substr(covData1$Appointment_Date[i], 0, 2), "/09/", substr(covData1$Appointment_Date[i], 6, 9))
+    
+  }
+  else if (substr(covData1$Appointment_Date[i], 3, 5) == "OCT") {
+    covData1$Appointment_Date[i] <- paste0(substr(covData1$Appointment_Date[i], 0, 2), "/10/", substr(covData1$Appointment_Date[i], 6, 9))
+    
+  }
+  else if (substr(covData1$Appointment_Date[i], 3, 5) == "NOV") {
+    covData1$Appointment_Date[i] <- paste0(substr(covData1$Appointment_Date[i], 0, 2), "/11/", substr(covData1$Appointment_Date[i], 6, 9))
+    
+  }
+  else if (substr(covData1$Appointment_Date[i], 3, 5) == "DEC") {
+    covData1$Appointment_Date[i] <- paste0(substr(covData1$Appointment_Date[i], 0, 2), "/12/", substr(covData1$Appointment_Date[i], 6, 9))
+    
+  }
+}
+
+covData1$Weekday <- wday(dmy(covData1$Appointment_Date))
+covData1$Weekday <- recode(covData1$Weekday, 
+                             "1"="Sunday",
+                             "2"="Monday",
+                             "3"="Tuesday",
+                             "4"="Wednesday",
+                             "5"="Thursday",
+                             "6"="Friday",
+                             "7"="Saturday")
+
+# summing the data over days
+sumData <- aggregate(covData1$COUNT_OF_APPOINTMENTS, by=list(Appointment_Date=covData1$Appointment_Date), FUN=sum)
+
+# unifying th date format
+sumData$Weekday <- wday(dmy(sumData$Appointment_Date))
+sumData$Weekday <- recode(sumData$Weekday, 
+                            "1"="Sunday",
+                            "2"="Monday",
+                            "3"="Tuesday",
+                            "4"="Wednesday",
+                            "5"="Thursday",
+                            "6"="Friday",
+                            "7"="Saturday")
+
+# plotting the relationship between appointments and weekday
+sumData$Appointment_Date <- dmy(sumData$Appointment_Date)
+ggplot(sumData, aes(x = Appointment_Date, y = x, color = Weekday)) + geom_jitter() + labs(y = "Visits per day", x = "Date")
+Weekmean <- aggregate(sumData$x, by=list(a = sumData$Weekday), FUN = mean)
+
+
+
+# importing the coverage dataset
+
+coverage <- import("Appointments_GP_Daily_Aug19/coverage.csv")
+coverage <- coverage[which(coverage$COMMISSIONER_ORGANISATION_CODE == "05A"),]
+
+for (i in 1:length(coverage$Appointment_Month)) {
+  if (substr(coverage$Appointment_Month[i], 3, 5) == "JAN"){
+    coverage$Appointment_Month[i] <- paste0(substr(coverage$Appointment_Month[i], 0, 2), "/01/",20,  substr(coverage$Appointment_Month[i], 8, 11))
+  }
+  else if (substr(coverage$Appointment_Month[i], 3, 5) == "FEB"){
+    coverage$Appointment_Month[i] <- paste0(substr(coverage$Appointment_Month[i], 0, 2), "/02/",20,  substr(coverage$Appointment_Month[i], 8, 11))
+  }
+  else if (substr(coverage$Appointment_Month[i], 3, 5) == "MAR"){
+    coverage$Appointment_Month[i] <- paste0(substr(coverage$Appointment_Month[i], 0, 2), "/03/",20,  substr(coverage$Appointment_Month[i], 8, 11))
+  }
+  else if (substr(coverage$Appointment_Month[i], 3, 5) == "APR"){
+    coverage$Appointment_Month[i] <- paste0(substr(coverage$Appointment_Month[i], 0, 2), "/04/",20,  substr(coverage$Appointment_Month[i], 8, 11))
+  }
+  else if (substr(coverage$Appointment_Month[i], 3, 5) == "MAY"){
+    coverage$Appointment_Month[i] <- paste0(substr(coverage$Appointment_Month[i], 0, 2), "/05/",20,  substr(coverage$Appointment_Month[i], 8, 11))
+  }
+  else if (substr(coverage$Appointment_Month[i], 3, 5) == "JUN"){
+    coverage$Appointment_Month[i] <- paste0(substr(coverage17$Appointment_Month[i], 0, 2), "/06/",20,  substr(coverage$Appointment_Month[i], 8, 11))
+  }
+  else if (substr(coverage$Appointment_Month[i], 3, 5) == "JUL"){
+    coverage$Appointment_Month[i] <- paste0(substr(coverage$Appointment_Month[i], 0, 2), "/07/",20,  substr(coverage$Appointment_Month[i], 8, 11))
+  }
+  else if (substr(coverage$Appointment_Month[i], 3, 5) == "AUG"){
+    coverage$Appointment_Month[i] <- paste0(substr(coverage$Appointment_Month[i], 0, 2), "/08/",20,  substr(coverage$Appointment_Month[i], 8, 11))
+  }
+  else if (substr(coverage$Appointment_Month[i], 3, 5) == "SEP"){
+    coverage$Appointment_Month[i] <- paste0(substr(coverage$Appointment_Month[i], 0, 2), "/09/",20,  substr(coverage$Appointment_Month[i], 8, 11))
+  }
+  else if (substr(coverage$Appointment_Month[i], 3, 5) == "OCT"){
+    coverage$Appointment_Month[i] <- paste0(substr(coverage$Appointment_Month[i], 0, 2), "/10/",20,  substr(coverage$Appointment_Month[i], 8, 11))
+  }
+  else if (substr(coverage$Appointment_Month[i], 3, 5) == "NOV"){
+    coverage$Appointment_Month[i] <- paste0(substr(coverage$Appointment_Month[i], 0, 2), "/11/",20,  substr(coverage$Appointment_Month[i], 8, 11))
+  }
+  else if (substr(coverage$Appointment_Month[i], 3, 5) == "DEC"){
+    coverage$Appointment_Month[i] <- paste0(substr(coverage$Appointment_Month[i], 0, 2), "/12/",20,  substr(coverage$Appointment_Month[i], 8, 11))
+  }
+}
+
+# merging coverage with covData
+covData1$patients <- list(0)
+covData1$all_patients <- list(0)
+covData1$ratio_patients <- list(0)
+
+
+for (i in 1:nrow(coverage)) {
+  for (j in 1:nrow(covData1)) {
+    if(substr(coverage$Appointment_Month[i], 4, 11) == substr(covData1$Appointment_Date[j], 4, 11)) {
+      covData1$patients[j] <- coverage$`Patients registered at included practices`[i]
+      covData1$all_patients[j] <- coverage$`Patients registered at open practices`[i]
+      
+    }
+    
+  }
+}
+
+covData1$ratio_patients <- as.numeric(covData1$patients)/as.numeric(covData1$all_patients)
+
+
+#write CovData1 in a csv file
+covData1$patients <- unlist(covData1$patients)
+covData1$all_patients <- unlist(covData1$all_patients)
+
+
+write.csv(covData1, "covData1.csv", row.names = FALSE)
+```
+The files containing information about coverage  need to be merged before being binded with main dataset.
+```{r coverage}
+coverage_alpha <- vector(mode = "numeric", 20)
+coverage_alpha <- import("Appointments_GP_Daily_Aug19/APPOINTMENTS_GP_COVERAGE.csv")
+coverage_alpha <- coverage_alpha[which(coverage_alpha$COMMISSIONER_ORGANISATION_CODE == "05A"),]
+
+coverage_a <- import("Appointments_GP_Daily_Aug19/cov_a.csv")
+coverage_a <- coverage_a[which(coverage_a$COMMISSIONER_ORGANISATION_CODE == "05A"),]
+coverage_alpha <- rbind(coverage_alpha, coverage_a[15:16, ])
+write.csv(coverage_alpha, "coverage.csv")
+
+coverage19 <- import("Appointments_GP_Daily_Aug19/APPOINTMENTS_GP_COVERAGE2.csv")
+coverage19 <- coverage19[which(coverage19$COMMISSIONER_ORGANISATION_CODE == "05A"),]
+coverage19 <- coverage19[17:18,]
+coverage19 <-select(coverage19, -STPCD, -REGIONAL_LOCAL_OFFICE_CODE, -REGION_CODE)
+coverage19$Appointment_Month[1] <- "01/11/2019"
+coverage19$Appointment_Month[2] <- "01/12/2019"
+
+coverage17a <- coverage17[1:4, ]
+coverage17a <- select(coverage17a, -STPCD, -SUBREGION_CODE, -REGION_CODE)
+names(coverage17a)[4] <- "Open Practices"
+coverage18a <- select(coverage, -V1, -STPCD, -REGIONAL_LOCAL_OFFICE_CODE, -REGION_CODE)
+full_coverage <- rbind(coverage17a, coverage18a, coverage19)
+full_coverage[20, 2] <- "01/06/2019"
+full_coverage$Appointment_Month <- dmy(full_coverage$Appointment_Month)
+full_coverage$MonthYear <- substr(full_coverage$Appointment_Month, 1,7) 
+full_coverage <- full_coverage[3:26, ]
+```
+
+
+Final merger of the datasets. 
+
+```{r merger, message = FALSE}
+data17 <- import("covData17a.csv")
+data18 <- import("covData1.csv")
+data17$Appointment_Date <- dmy(data17$Appointment_Date)
+data18$Appointment_Date <- dmy(data18$Appointment_Date)
+data17 <- filter(data17, Appointment_Date <= as.Date("2018-02-28"))
+
+merged_coventry <- rbind(data17, data18)
+
+merged_sumData <- aggregate(merged_coventry$COUNT_OF_APPOINTMENTS, by=list(Appointment_Date=merged_coventry$Appointment_Date), FUN=sum)
+merged_sumData <-  mutate(merged_sumData, Appointment_Date = as.Date(Appointment_Date))
+merged_sumData <-  complete(merged_sumData,Appointment_Date = seq.Date(min(Appointment_Date), max(Appointment_Date), by= 'day'))
+merged_sumData$Weekday <- wday(merged_sumData$Appointment_Date)
+merged_sumData$Weekday <- recode(merged_sumData$Weekday, 
+                                 "1"="Sunday",
+                                 "2"="Monday",
+                                 "3"="Tuesday",
+                                 "4"="Wednesday",
+                                 "5"="Thursday",
+                                 "6"="Friday",
+                                 "7"="Saturday")
+
+merged_sumData <- merged_sumData[62:791, ]
+names(merged_sumData)[2] <- "Appointment_Count"
+
+sum <- 0
+j <-0
+for (i in 1:nrow(merged_sumData)) {
+  if (merged_sumData$Weekday[i] == "Sunday") {
+    sum <- sum + merged_sumData$Appointment_Count[i]
+    j <-j+1
+  }
+}
+
+merged_sumData <-  mutate(merged_sumData, Appointment_Date = as.Date(Appointment_Date))
+merged_sumData <-  complete(merged_sumData,Appointment_Date = seq.Date(min(Appointment_Date), max(Appointment_Date), by= 'day'))
+mean <- round(sum/j)
+
+for (i in 1:nrow(merged_sumData)) {
+  if (is.na(merged_sumData$Appointment_Count[i])) {
+    merged_sumData$Appointment_Count[i] <- 13
+    }
+}
+```
+
+Initial plot with the merged  data.
+```{r initial plots}
+#newer data from Mar18 till Aug19
+
+#p_new <- ggplot(sumData, aes(x = Appointment_Date, y = Appointment_Count, color = Weekday)) + geom_jitter() + labs(y = "Visits per day", x = "Date") + ylim(0, 12000)
+
+#older data from Nov17 till Oct 18
+
+#p_old <- ggplot(sumData17, aes(x = Appointment_Date, y = Appointment_Count, color = Weekday)) + geom_jitter() + labs(y = "Visits per day", x = "Date") + ylim(0, 12000)
+
+#all data from Nov17 till Aug19
+p_all <- ggplot(merged_sumData, aes(x = Appointment_Date, y = Appointment_Count, color = Weekday)) + geom_jitter() + labs(y = "Visits per day", x = "Date") + ylim(0, 12000)
+p_all
+#  comparison of three distributions
+#grid.arrange(p_old, p_new, p_all, nrow = 1)
+```
+
+Features such as season, month, coverage ratio are added now.
+```{r adding features}
+# add month feature
+merged_sumData$MonthYear <- substr(merged_sumData$Appointment_Date, 1,7) 
+merged_sumData$Month <- substr(merged_sumData$Appointment_Date, 6,7) 
+# delete time feature
+merged_coventry <-select(merged_coventry, -TIME_BETWEEN_BOOK_AND_APPT)
+
+# add no of  patients to merged_Sumdata
+merged_sumData$patients <- vector(mode = "numeric", nrow(merged_sumData))
+merged_sumData$all_patients <- vector(mode = "numeric", nrow(merged_sumData))
+merged_sumData$ratio_patients <- vector(mode = "numeric", nrow(merged_sumData))
+
+#time series  with the fitted trend line before adjusting
+ggplot(merged_sumData, aes(x = Appointment_Date, y = Appointment_Count)) + geom_jitter(aes(color = Weekday)) + labs(y = "Visits per day", x = "Date") + stat_smooth(method = lm)
+
+write.csv(merged_sumData, "merged_sumData.csv")
+
+
+# new way to merge coverage with mergedsumdata
+
+
+
+for( i in 1:nrow(full_coverage)) {
+  for(j in 1:nrow(merged_sumData)) {
+    if(merged_sumData$patients[j]==0) {
+      if (merged_sumData$MonthYear[j]==full_coverage$MonthYear[i]) {
+        merged_sumData$patients[j] <- full_coverage$`Patients registered at included practices`[i]
+        merged_sumData$all_patients[j] <- full_coverage$`Patients registered at open practices`[i]
+      }
+    }
+  }
+}
+
+#adjusting the no of appointments based on ratio of included patients
+
+merged_sumData$ratio_patients <- merged_sumData$patients/merged_sumData$all_patients
+merged_sumData$adjusted_count <- round(merged_sumData$Appointment_Count/merged_sumData$ratio_patients)
+
+# save merged_sumdata to shorten compilation time
+write.csv(merged_sumData, "merged_sumData1.csv")
+merged_sumData1 <-  import("merged_sumData1.csv")
+merged_sumData1 <- select(merged_sumData1, -V1)
+```
+
+Exploratory Data Analysis for the Question 1
+```{r eda, message = FALSE}
+
+weekday_mean <- group_by(merged_sumData, Weekday) %>% summarise(count = mean(Appointment_Count))
+weekday_mean$Weekday <- factor(weekday_mean$Weekday,levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
+weekday_mean$Workday <- vector(mode = "character", nrow(weekday_mean))
+for (i in 1:nrow(weekday_mean)) {
+  if (weekday_mean$Weekday[i] == "Saturday" | weekday_mean$Weekday[i] == "Sunday") {
+    weekday_mean$Workday[i] <- "Weekend"
+  }
+  else {
+    weekday_mean$Workday[i] <- "Workday"
+    }
+}
+weekday_mean$Workday <- factor(weekday_mean$Workday,levels = c("Workday", "Weekend"))
+
+
+              # seasonality analysis
+# add season indicator
+merged_sumData$Season <- vector(mode = "character", nrow(merged_sumData))
+
+for (i in 1:nrow(merged_sumData)) {
+  if (merged_sumData$Month[i] == "12" || merged_sumData$Month[i] == "01" || merged_sumData$Month[i] == "02")  {
+    merged_sumData$Season[i] <- "Winter"
+  }
+  if (merged_sumData$Month[i] == "03" || merged_sumData$Month[i] == "04" || merged_sumData$Month[i] == "05" )  {
+    merged_sumData$Season[i] <- "Spring"
+  }
+  if (merged_sumData$Month[i] == "06" || merged_sumData$Month[i] == "07" || merged_sumData$Month[i] == "08")  {
+    merged_sumData$Season[i] <- "Summer"
+  }
+  if (merged_sumData$Month[i] == "09" || merged_sumData$Month[i] == "10" || merged_sumData$Month[i] == "11")  {
+    merged_sumData$Season[i] <- "Autumn"
+  }
+}
+
+merged_sumData_work <- filter(merged_sumData, Weekday == "Monday" | Weekday == "Tuesday" | Weekday == "Wednesday" | Weekday == "Thursday" | Weekday ==  "Friday")
+merged_sumData_work <- filter(merged_sumData_work, Appointment_Count >100)
+month_mean <- group_by(merged_sumData_work, Month, Season) %>% summarise(count = mean(Appointment_Count))
+month_mean$Month <- factor(month_mean$Month,levels = c("01", "02", "03", "04", "05", "06","07", "08", "09", "10", "11", "12"))
+month_mean$Season <- factor(month_mean$Season,levels = c("Spring", "Summer", "Autumn", "Winter"))
+
+
+
+# add year feature
+merged_sumData$year <- year(merged_sumData$Appointment_Date)
+merged_sumData$Season <- factor(merged_sumData$Season, levels = c("Spring", "Summer", "Autumn", "Winter"))
+p_season <- ggplot(merged_sumData_work, aes(x = Appointment_Date, y = adjusted_count)) + geom_jitter(aes(color = Season)) + labs(y = "Visits per day", x = "Date") + ylim(0, 12000) + stat_smooth(method = "loess", se = FALSE) + scale_color_brewer(palette="Dark2")
+p_season
+merged_sumData_work <- merged_sumData_work[]
+one_year <- merged_sumData_work[43:295, ]
+p_season2 <- ggplot(one_year, aes(x = Appointment_Date, y = adjusted_count, color = Season)) + geom_point() + labs(y = "Visits per day", x = "Date") + ylim(0, 12000) + stat_smooth(method = "lm", formula = y ~ x, se = FALSE) + scale_color_brewer(palette="Dark2")
+p_season2
+by_season <- group_by(merged_sumData, Season, year) %>% summarise(count = sum(Appointment_Count))
+by_month <- group_by(merged_sumData, Month, year) %>% summarise(count = sum(Appointment_Count))
+by_season$year <- as.character(by_season$year)
+by_month$year <- as.character(by_month$year)
+by_month$MonthYear <- dmy(paste0("01/", by_month$Month, "/", by_month$year))
+
+ggplot(data = by_season, aes(x = Season, y = count, fill = year)) + geom_bar(stat = "identity", position = position_dodge())+ scale_color_brewer(palette="Dark2")
+ggplot(data = by_month, aes(x = MonthYear, y = count, fill = Month)) + geom_bar(stat = "identity", position = position_dodge()) + scale_fill_brewer(palette="Paired")
+
+
+# plots for task 1
+merged_sumData$Weekday <- factor(merged_sumData$Weekday,levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
+merged_sumData_work$Weekday <- factor(merged_sumData_work$Weekday,levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
+
+p_adjusted_work <- ggplot(merged_sumData_work, aes(x = Appointment_Date, y = adjusted_count)) + geom_jitter(aes(color = Weekday)) + labs(y = "Visits per day", x = "Date") + ylim(0, 12000) + stat_smooth(method = lm)+ scale_color_brewer(palette="Dark2")
+p_adjusted_work
+
+p_adjusted <- ggplot(merged_sumData, aes(x = Appointment_Date, y = adjusted_count)) + geom_jitter(aes(color = Season)) + labs(y = "Visits per day", x = "Date") + ylim(0, 12000)+ scale_color_brewer(palette="Dark2")
+p_adjusted
+
+p_not_adjusted <- ggplot(merged_sumData, aes(x = Appointment_Date, y = Appointment_Count)) + geom_jitter(aes(color = Weekday)) + labs(y = "Visits per day", x = "Date") + stat_smooth(method = lm)+ scale_color_brewer(palette="Dark2")
+p_not_adjusted
+
+weekday_mean_plot <- ggplot(weekday_mean, aes(x = Weekday, y = count, fill = Workday)) + geom_bar(stat = "identity", position = position_dodge())+ labs(x = "Weekday", y = "Average number of appointments")+ scale_fill_brewer(palette="Dark2")
+weekday_mean_plot
+
+month_mean_plot <- ggplot(month_mean, aes(x = Month, y = count, fill = Season)) + geom_bar(stat = "identity", position = position_dodge())+ labs(x = "Month", y = "Average number of appointments") + scale_fill_brewer(palette="Dark2")
+month_mean_plot
+
+```
+
+Seasonal Decompsition of the Time Series
+```{r stl, message = FALSE}
+# seasonal trend decompposition
+# weekly
+rm(sum)
+sum_weekly <- as.xts(merged_sumData$Appointment_Count, order.by = merged_sumData$Appointment_Date)
+sum_weekly <- apply.weekly(sum_weekly, sum)
+sum_weekly <- as.data.frame(sum_weekly)
+names(sum_weekly)[1] <- "Appointment Count"
+sum_weekly2 <- sum_weekly$`Appointment Count`
+sum_weekly2 <- as.numeric(sum_weekly2)
+sum_weekly.ts <- ts(sum_weekly2, start=c(2018, 1), frequency = 52)
+stl_weekly <- stl(sum_weekly.ts, s.window = "periodic")
+#plot.ts(sum_weekly.ts)
+plot(stl_weekly)
+decompose_weekly_add <- decompose(sum_weekly.ts,type = "additive")
+decompose_weekly_mult <- decompose(sum_weekly.ts,type = "multiplicative")
+plot(decompose_weekly_add)
+plot(decompose_weekly_mult)
+
+#montly
+rm(sum)
+sum_monthly <- as.xts(merged_sumData$Appointment_Count, order.by = merged_sumData$Appointment_Date)
+sum_monthly <- apply.monthly(sum_monthly, FUN = sum)
+sum_monthly <- as.data.frame(sum_monthly)
+
+names(sum_monthly)[1] <- "Appointment Count"
+sum_monthly2 <- sum_monthly$`Appointment Count`
+sum_monthly2 <- as.numeric(sum_monthly2)
+sum_monthly2[25] <- 187706
+sum_monthly.ts <- ts(sum_monthly2, start=c(2018, 1), frequency = 12)
+plot.ts(sum_monthly.ts)
+stl_monthly <- stl(sum_monthly.ts, s.window = "periodic")
+plot(stl_monthly)
+decompose_monthly_add <- decompose(sum_monthly.ts,type = "additive")
+decompose_monthly_mult <- decompose(sum_monthly.ts,type = "multiplicative")
+plot(decompose_monthly_mult)
+
+
+```
+Task 2
+
+
+Importing and merging weather data. 
+```{r task2 merger}
+temp <- import("temp.xlsx")
+rainfall <- import("rainfall.xlsx")
+temp <- temp[37:60,2]
+rainfall <- rainfall[37:60,2]
+monthly_sumdata <- aggregate(merged_sumData$adjusted_count, by=list(monthYear = merged_sumData$MonthYear), FUN = sum)
+monthly_sumdata <- cbind(monthly_sumdata, rainfall, temp)
+names(monthly_sumdata)[2] <- "Appointment_Count"
+monthly_sumdata$monthYear <-paste0(monthly_sumdata$monthYear, "-01")
+monthly_sumdata$monthYear <- ymd(monthly_sumdata$monthYear)
+monthly_sumdata$Month <- month(monthly_sumdata$monthYear, label = TRUE)
+
+
+monthly_sumdata$Season <- vector(mode = "character", nrow(monthly_sumdata))
+monthly_sumdata$Season_numeric <- vector(mode = "numeric", nrow(monthly_sumdata))
+
+for (i in 1:nrow(monthly_sumdata)) {
+  if (monthly_sumdata$Month[i] == "Dec" || monthly_sumdata$Month[i] == "Jan" || monthly_sumdata$Month[i] == "Feb")  {
+    monthly_sumdata$Season[i] <- "Winter"
+    monthly_sumdata$Season_numeric[i] <- 4
+    
+  }
+  if (monthly_sumdata$Month[i] == "Mar" || monthly_sumdata$Month[i] == "Apr" || monthly_sumdata$Month[i] == "May")  {
+    monthly_sumdata$Season[i] <- "Spring"
+    monthly_sumdata$Season_numeric[i] <- 1
+    
+  }
+  if (monthly_sumdata$Month[i] == "Jun" || monthly_sumdata$Month[i] == "Jul" || monthly_sumdata$Month[i] == "Aug")  {
+    monthly_sumdata$Season[i] <- "Summer"
+    monthly_sumdata$Season_numeric[i] <- 2
+    
+  }
+  if (monthly_sumdata$Month[i] == "Sep" || monthly_sumdata$Month[i] == "Oct" || monthly_sumdata$Month[i] == "Nov")  {
+    monthly_sumdata$Season[i] <- "Autumn"
+    monthly_sumdata$Season_numeric[i] <- 3
+    
+  }
+}
+```
+Exploratory Data Analysis for Question 2
+```{r eda2}
+ggplot(monthly_sumdata, aes(x = monthYear, y = Appointment_Count)) + geom_point(aes(size = rainfall, color = temp)) + scale_color_gradient(low = "blue", high = "red")
+
+
+names(monthly_sumdata)[3] <- "Rainfall"
+names(monthly_sumdata)[4] <- "Temperature"
+ggplot(monthly_sumdata, aes(x = temp, y = Appointment_Count)) + stat_smooth(method = "lm") + labs(x = "Average monthly temperature in Coventry in the UK(in Celsius)", y = "Total number of appointments")
+ggplot(monthly_sumdata, aes(x = rainfall, y = Appointment_Count)) + stat_smooth(method = "lm")+ labs(x = "Total monthly rainfall in the UK(in mm)", y = "Total number of appointments")
+
+
+monthly_sumdata$Month <- month(monthly_sumdata$monthYear, label = FALSE)
+corrdata <- select(monthly_sumdata, Appointment_Count, Rainfall, Temperature)
+names(corrdata)[1] <- "Number of appointments"
+
+
+corelation <- cor(corrdata)
+ggcorrplot(corelation, hc.order = FALSE, type = "full", lab = TRUE) 
+```
